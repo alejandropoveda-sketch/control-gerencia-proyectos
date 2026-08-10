@@ -196,6 +196,7 @@
 </div>
 <header>
   <div class="brand" onclick="goLanding()">◧ Control de Proyectos <span>· Gerencia</span></div>
+  <span id="syncst" style="font-size:11px;color:var(--muted)">…</span>
   <input id="projName" onchange="renameProject(this.value)" style="display:none">
   <div class="calbox" id="calWrap" style="display:none">📅 Inicio calendario:
     <input type="date" id="calStart" onchange="setCalStart(this.value)"></div>
@@ -319,7 +320,31 @@ let TASKS, collapsed;
 function bind(){TASKS=PROJECTS[cur].tasks;collapsed=PROJECTS[cur].collapsed;}
 // -------- persistencia (guardado en el navegador + exportar/importar) --------
 const KEY='gestorProyectos_v1';
-function saveState(){try{localStorage.setItem(KEY,JSON.stringify(PROJECTS));}catch(e){}}
+function saveState(){try{localStorage.setItem(KEY,JSON.stringify(PROJECTS));}catch(e){}cloudSave();}
+// -------- sincronización en la nube (Supabase) --------
+const SB_URL='https://usxqxflhzfmyqnsbhxuk.supabase.co';
+const SB_KEY='sb_publishable_dwOSkwohTHeB4hCQiw5xVg_PW8Mehsi';
+const SB_HEADERS={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+let saveTimer=null;
+function setSync(txt,color){const el=document.getElementById('syncst');if(el){el.textContent=txt;el.style.color=color||'var(--muted)';}}
+async function cloudLoad(){
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/estado?id=eq.main&select=data',{headers:SB_HEADERS});
+    if(!r.ok)return 'error';
+    const rows=await r.json();const data=rows&&rows[0]?rows[0].data:null;
+    if(Array.isArray(data)&&data.length){PROJECTS=data;
+      PROJECTS.forEach(pr=>{pr.collapsed=pr.collapsed||{};(pr.tasks||[]).forEach(t=>{if(!t.pred)t.pred=[];});});
+      return 'data';}
+    return 'empty';
+  }catch(e){return 'error';}}
+function cloudSave(){clearTimeout(saveTimer);setSync('sincronizando…','var(--curso)');
+  saveTimer=setTimeout(async()=>{
+    try{const r=await fetch(SB_URL+'/rest/v1/estado',{method:'POST',
+        headers:Object.assign({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},SB_HEADERS),
+        body:JSON.stringify([{id:'main',data:PROJECTS,updated_at:new Date().toISOString()}])});
+      setSync(r.ok?'guardado en la nube ✓':'error al guardar',r.ok?'var(--ok)':'#ef4444');
+    }catch(e){setSync('sin conexión (queda local)','#ef4444');}
+  },800);}
 function loadState(){try{const s=localStorage.getItem(KEY);if(s){const p=JSON.parse(s);
   if(Array.isArray(p)&&p.length){PROJECTS=p;PROJECTS.forEach(pr=>{pr.collapsed=pr.collapsed||{};
     (pr.tasks||[]).forEach(t=>{if(!t.pred)t.pred=[];});});return true;}}}catch(e){}return false;}
@@ -715,7 +740,13 @@ function tryUnlock(){const v=document.getElementById('lkpass').value;
   else{document.getElementById('lkerr').textContent='Clave incorrecta';document.getElementById('lkpass').value='';}}
 try{if(sessionStorage.getItem('unlocked')==='1')document.getElementById('lock').style.display='none';}catch(e){}
 
-loadState();bind();goLanding();
+(async function init(){
+  loadState();                 // caché local rápida
+  const st=await cloudLoad();   // si la nube tiene datos, manda la nube
+  bind();goLanding();
+  if(st==='empty')cloudSave();  // primera vez: siembra la nube con lo actual
+  setSync(st==='error'?'sin conexión (local)':'conectado a la nube ✓', st==='error'?'#ef4444':'var(--ok)');
+})();
 </script>
 </body>
 </html>
