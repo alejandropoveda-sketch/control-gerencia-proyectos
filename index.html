@@ -145,7 +145,9 @@
   /* hitos banner */
   #hbannerWrap{margin-bottom:16px}
   .hbanner{background:linear-gradient(90deg,#111827,#1f2937);color:#fff;border-radius:12px;padding:9px 14px}
-  .hb-t{font-size:11px;font-weight:700;margin-bottom:7px;letter-spacing:.4px}
+  .hb-t{font-size:11px;font-weight:700;margin-bottom:7px;letter-spacing:.4px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .pdfbtn{background:#fff;border:1px solid rgba(255,255,255,.3);color:#111827;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap}
+  .pdfbtn:hover{background:#e8eefc}
   .hb-list{display:flex;gap:7px;flex-wrap:wrap}
   .hb-item{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;
     padding:5px 8px;display:flex;flex-direction:column;gap:1px;min-width:104px}
@@ -279,12 +281,6 @@
 
 <div id="present">
   <div id="hbannerWrap"></div>
-  <div class="pcontrols">
-    <button class="pbtn" onclick="exportPDF()">⬇ Exportar PDF</button>
-    <span style="flex:1"></span>
-    <input id="mailto" type="email" class="pmail" placeholder="correo@empresa.com">
-    <button class="pbtn" onclick="sendReport()">✉ Enviar informe</button>
-  </div>
   <div class="pboard" id="pboard"></div>
 </div>
 <div id="printArea"></div>
@@ -675,13 +671,16 @@ function renderPresent(){schedule();
   const today=todayD();
   // 1) HITOS: franja superior, ordenados por fecha del gantt, con marca de hoy
   const hg=TASKS.findIndex(t=>t.level===2&&t.name==='HITOS CLAVE');
-  if(hg>=0){let kids=descendants(hg).filter(j=>TASKS[j].type==='hito').map(j=>TASKS[j]);
-    kids=kids.slice().sort((a,b)=>d(a.start)-d(b.start));
-    hw.innerHTML=`<div class="hbanner"><div class="hb-t">◆ HITOS CLAVE &nbsp;<span style="font-weight:400;color:#9fb0c8">(orden por fecha · HOY ${fmt(today)})</span></div><div class="hb-list">`+
+  const pdfBtn=`<button class="pdfbtn" onclick="exportPDF()">⬇ Exportar PDF</button>`;
+  if(hg>=0){let kids=descendants(hg).filter(j=>TASKS[j].type==='hito').map(j=>TASKS[j]).sort((a,b)=>d(a.start)-d(b.start));
+    hw.innerHTML=`<div class="hbanner"><div class="hb-t"><span>◆ HITOS CLAVE &nbsp;<span style="font-weight:400;color:#9fb0c8">(orden por fecha · HOY ${fmt(today)})</span></span>${pdfBtn}</div><div class="hb-list">`+
       kids.map(k=>{const past=d(k.end)<today&&k.estado!=='Cerrado';
         return `<div class="hb-item" ${past?'style=\"border-color:#ef4444\"':''}><span class="hb-n">${k.name}</span><span class="hb-d">${fmt(d(k.start))}</span>
         <span class="tag ${k.estado==='Cerrado'?'ok':k.estado==='En curso'?'curso':(past?'':'pend')}" ${past?'style=\"background:#fee2e2;color:#ef4444\"':''}>${past?'⚠ vencido':k.estado}</span></div>`;}).join('')+
-      `</div></div>`;}
+      `</div></div>`;
+  } else {
+    hw.innerHTML=`<div class="hbanner"><div class="hb-t"><span>Presentación Gerencial</span>${pdfBtn}</div></div>`;
+  }
   // 2) capítulos (SIN hitos, SIN fases medibles Construcción/Ventas/Escrituración/Entregas)
   TASKS.forEach((t,i)=>{if(t.level!==2)return;if(t.name==='HITOS CLAVE')return;if(t.medida)return;
     const color=groupColor(i);const pct=t.pct||0;
