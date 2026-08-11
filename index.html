@@ -182,6 +182,32 @@
   .lockbox button{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer}
   .lockbox button:hover{background:#1d4ed8}
   .lkerr{color:#ef4444;font-size:12px;margin-top:8px;min-height:16px}
+  /* controles de presentación (PDF / correo) */
+  .pcontrols{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;flex:0 0 auto}
+  .pbtn{background:#fff;border:1px solid var(--line);color:var(--accent);font-weight:700;padding:7px 12px;border-radius:9px;cursor:pointer;font-size:13px}
+  .pbtn:hover{background:var(--accent2);border-color:var(--accent)}
+  .pmail{border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13px;min-width:230px}
+  .pmail:focus{outline:none;border-color:var(--accent)}
+  /* botón eliminar proyecto en landing */
+  .pcardL{position:relative}
+  .delp{position:absolute;top:10px;right:10px;background:#fff;border:1px solid var(--line);color:#ef4444;
+    width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px;z-index:3;line-height:1}
+  .delp:hover{background:#fee2e2;border-color:#ef4444}
+  /* PDF (impresión de la presentación) */
+  #printArea{display:none}
+  @media print{
+    #lock,header,.kpis,#toolbar,#gantt,#present,#landing{display:none!important}
+    #printArea{display:block!important}
+    @page{margin:14mm}
+  }
+  #printArea{font-family:'Segoe UI',Arial,sans-serif;color:#1f2a44}
+  #printArea .pdf-h1{font-size:20px;font-weight:800;margin-bottom:2px}
+  #printArea .pdf-meta{color:#555;font-size:12px;margin-bottom:14px}
+  #printArea .pdf-card{border:1px solid #dde3ee;border-radius:8px;margin-bottom:12px;page-break-inside:avoid;overflow:hidden}
+  #printArea .pdf-card h3{background:#f0f4fb;margin:0;padding:8px 12px;font-size:14px;display:flex;justify-content:space-between}
+  #printArea .pdf-card ul{list-style:none;margin:0;padding:6px 12px}
+  #printArea .pdf-card li{padding:4px 0;border-bottom:1px solid #eef1f6;font-size:12px}
+  #printArea .pdf-card li:last-child{border-bottom:none}
 </style>
 </head>
 <body>
@@ -210,12 +236,7 @@
 <!-- LANDING -->
 <div id="landing">
   <h2>Mis proyectos</h2>
-  <div class="sub">Selecciona un proyecto para abrir su Gantt y su presentación gerencial. Los cambios se guardan solos en este navegador.</div>
-  <div style="margin-bottom:18px;display:flex;gap:8px;flex-wrap:wrap">
-    <button class="back" onclick="exportData()">⬇ Exportar copia (archivo)</button>
-    <button class="back" onclick="document.getElementById('impFile').click()">⬆ Importar copia</button>
-    <input type="file" id="impFile" accept="application/json" style="display:none" onchange="importData(this.files[0])">
-  </div>
+  <div class="sub">Selecciona un proyecto para abrir su Gantt y su presentación gerencial. Los cambios se guardan solos en la nube.</div>
   <div class="plist" id="plist"></div>
 </div>
 
@@ -256,7 +277,17 @@
   </div>
 </div>
 
-<div id="present"><div id="hbannerWrap"></div><div class="pboard" id="pboard"></div></div>
+<div id="present">
+  <div id="hbannerWrap"></div>
+  <div class="pcontrols">
+    <button class="pbtn" onclick="exportPDF()">⬇ Exportar PDF</button>
+    <span style="flex:1"></span>
+    <input id="mailto" type="email" class="pmail" placeholder="correo@empresa.com">
+    <button class="pbtn" onclick="sendReport()">✉ Enviar informe</button>
+  </div>
+  <div class="pboard" id="pboard"></div>
+</div>
+<div id="printArea"></div>
 
 <script>
 const BASE = [{"id": 1, "level": 1, "name": "7 ESTORIAS GERENCIA", "baseStart": "2022-07-19", "dur": 744, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 100, "level": 2, "name": "HITOS CLAVE", "baseStart": "2023-09-19", "dur": 1, "pred": [], "pct": 0, "estado": "", "type": "tarea"}, {"id": 101, "level": 3, "name": "Salida a ventas", "baseStart": "2023-09-19", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 102, "level": 3, "name": "Inicio de obra", "baseStart": "2024-03-01", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 103, "level": 3, "name": "Inicio de escrituración", "baseStart": "2025-06-02", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 104, "level": 3, "name": "RPH registrado", "baseStart": "2024-06-26", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 105, "level": 3, "name": "CTO (Certificado Técnico de Ocupación)", "baseStart": "2025-06-27", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 106, "level": 3, "name": "Póliza decenal", "baseStart": "2025-06-27", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 107, "level": 3, "name": "Punto de equilibrio", "baseStart": "2023-11-24", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 2, "level": 2, "name": "JURIDICO Y LOTE", "baseStart": "2022-10-10", "dur": 687, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 3, "level": 3, "name": "Fideicomiso de Parqueo", "baseStart": "2022-10-10", "dur": 10, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 4, "level": 3, "name": "Transferencia Lote al fideicomiso Parqueo", "baseStart": "2022-11-28", "dur": 15, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 5, "level": 4, "name": "Salida escritura de registro", "baseStart": "2022-11-28", "dur": 15, "pred": [3], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 6, "level": 3, "name": "Fideicomiso de Contrato de Preventas", "baseStart": "2022-11-08", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 7, "level": 4, "name": "Contrato fiduciario preventa", "baseStart": "2022-11-08", "dur": 33, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 8, "level": 4, "name": "Contrato de adhesion modelo fiduciario", "baseStart": "2022-11-08", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 9, "level": 4, "name": "Declaro conocer y formulario separacion G Accanto", "baseStart": "2022-11-08", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 10, "level": 3, "name": "Promesa de compraventa mayor VIS - Uso dotacional de bienestar social", "baseStart": "2023-02-20", "dur": 55, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 11, "level": 4, "name": "Elaboración promesa para Uso Dotacional", "baseStart": "2023-02-20", "dur": 55, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 12, "level": 3, "name": "Modelo escrituración apartamentos", "baseStart": "2023-05-12", "dur": 50, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 13, "level": 4, "name": "Elaboración minuta de escrituración", "baseStart": "2023-05-12", "dur": 50, "pred": [11], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 14, "level": 3, "name": "Fideicomiso de mejoras", "baseStart": "2023-05-02", "dur": 100, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 15, "level": 4, "name": "Constituir fideicomiso mejoras", "baseStart": "2023-05-02", "dur": 100, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 16, "level": 3, "name": "Fideicomiso Inmobiliario completo", "baseStart": "2025-01-01", "dur": 15, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 17, "level": 4, "name": "Cesión derechos a 7 ESTORIAS S.A.S", "baseStart": "2025-01-08", "dur": 10, "pred": [18], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 18, "level": 4, "name": "Otrosi Integral Fideicomiso Parqueo y Preventas", "baseStart": "2025-01-01", "dur": 5, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 19, "level": 3, "name": "Reglamento de propiedad horizontal Uso Dotacional", "baseStart": "2023-08-15", "dur": 225, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 20, "level": 4, "name": "Elaboración minuta de RPH", "baseStart": "2023-08-15", "dur": 170, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 21, "level": 4, "name": "Matriculas individuales sale registro", "baseStart": "2024-04-11", "dur": 55, "pred": [20], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 22, "level": 3, "name": "Desenglobe IDU y Paz y Salvo valorización matriculas individuales", "baseStart": "2024-06-27", "dur": 15, "pred": [21], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 23, "level": 3, "name": "Manual de propietario", "baseStart": "2025-01-07", "dur": 60, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 24, "level": 3, "name": "Administracion provisional - personeria juridica en alcaldia", "baseStart": "2025-06-02", "dur": 15, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 25, "level": 2, "name": "ESTUDIOS Y DISEÑOS", "baseStart": "2022-10-12", "dur": 250, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 26, "level": 3, "name": "Fichas de venta Planos ventas para clientes Promesa", "baseStart": "2023-01-12", "dur": 60, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 27, "level": 3, "name": "Definir distribucion locales comerciales", "baseStart": "2023-06-01", "dur": 65, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 28, "level": 3, "name": "Coordinacion tecnica proyecto arquitectonico", "baseStart": "2023-02-02", "dur": 125, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 29, "level": 3, "name": "Estudio acustico cumplir norma en los apartamentos", "baseStart": "2022-10-12", "dur": 20, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 30, "level": 3, "name": "Combos de acabados", "baseStart": "2023-09-11", "dur": 30, "pred": [27], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 31, "level": 2, "name": "COMERCIAL", "baseStart": "2022-11-28", "dur": 319, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 32, "level": 3, "name": "Lista de precios SMMLV para todo el proyecto", "baseStart": "2022-11-28", "dur": 15, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 33, "level": 3, "name": "Punto equilibrio fiduciaria", "baseStart": "2023-10-20", "dur": 25, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 34, "level": 3, "name": "Firma promesas", "baseStart": "2024-01-15", "dur": 40, "pred": [33], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 35, "level": 2, "name": "LICENCIAS Y PERMISOS", "baseStart": "2022-08-01", "dur": 456, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 36, "level": 3, "name": "Licencia inicial", "baseStart": "2022-08-01", "dur": 149, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 37, "level": 3, "name": "1er Modificación licencia proyecto real", "baseStart": "2023-03-24", "dur": 92, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 38, "level": 3, "name": "Cambio titular licencia", "baseStart": "2023-07-11", "dur": 1, "pred": [37], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 39, "level": 3, "name": "2da modificación de licencia planos de propiedad horizontal", "baseStart": "2024-02-12", "dur": 75, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 40, "level": 3, "name": "Permiso de enajeacion", "baseStart": "2023-08-15", "dur": 25, "pred": [37], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 41, "level": 2, "name": "FINANCIERO", "baseStart": "2022-07-19", "dur": 339, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 42, "level": 3, "name": "Liberación recursos desembolso preventa", "baseStart": "2023-11-24", "dur": 5, "pred": [33], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 43, "level": 3, "name": "Crédito constructor aprobado", "baseStart": "2022-07-19", "dur": 201, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 44, "level": 4, "name": "Presentacion credito bancos", "baseStart": "2023-02-10", "dur": 60, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 45, "level": 4, "name": "Hipoteca Lote a favor de Banco", "baseStart": "2022-07-19", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 46, "level": 3, "name": "Factibilidad tipo B", "baseStart": "2022-12-05", "dur": 10, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 47, "level": 3, "name": "Presupuesto Costo directo Tipo C", "baseStart": "2023-08-11", "dur": 55, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 48, "level": 3, "name": "Factibilidad tipo C", "baseStart": "2023-11-01", "dur": 15, "pred": [47], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 49, "level": 2, "name": "Construccion", "baseStart": "2024-03-01", "dur": 346, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea", "medida": {"tipo": "meses", "meta": 16, "avance": 0}}, {"id": 50, "level": 2, "name": "Ventas", "baseStart": "2022-02-11", "dur": 634, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea", "medida": {"tipo": "unidades", "meta": 120, "avance": 0}}, {"id": 51, "level": 2, "name": "Escrituración", "baseStart": "2025-06-02", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea", "medida": {"tipo": "unidades", "meta": 120, "avance": 0}}, {"id": 52, "level": 2, "name": "Entregas", "baseStart": "2025-06-02", "dur": 70, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea", "medida": {"tipo": "unidades", "meta": 120, "avance": 0}}];
@@ -675,6 +706,44 @@ function renderPresent(){schedule();
       <div class="pbar"><i style="width:${pct}%;background:${color}"></i></div><ul>${lis}</ul></div>`;
   });}
 
+// ==================== PDF + CORREO ====================
+function pdfChapters(){ // devuelve datos de la presentación para PDF/correo
+  schedule();const out=[];
+  TASKS.forEach((t,i)=>{if(t.level!==2||t.name==='HITOS CLAVE'||t.medida)return;
+    const leaves=descendants(i).filter(j=>!isSummary(j)).map(j=>TASKS[j]);
+    const src=(leaves.length?leaves:[t]).slice().sort((a,b)=>(ESTORD[a.estado]??2)-(ESTORD[b.estado]??2)||d(a.end)-d(b.end));
+    out.push({name:t.name,pct:t.pct||0,items:src});});
+  return out;}
+function exportPDF(){
+  const p=TASKS[0],today=todayD();
+  let html=`<div class="pdf-h1">Presentación Gerencial — ${PROJECTS[cur].name}</div>
+    <div class="pdf-meta">Fecha: ${fmt(today)} &nbsp;·&nbsp; Avance global: ${p.pct}%</div>`;
+  const hg=TASKS.findIndex(t=>t.level===2&&t.name==='HITOS CLAVE');
+  if(hg>=0){let kids=descendants(hg).filter(j=>TASKS[j].type==='hito').map(j=>TASKS[j]).sort((a,b)=>d(a.start)-d(b.start));
+    html+=`<div class="pdf-card"><h3><span>◆ Hitos clave</span></h3><ul>`+
+      kids.map(k=>`<li><b>${fmt(d(k.start))}</b> — ${k.name} (${k.estado})</li>`).join('')+`</ul></div>`;}
+  pdfChapters().forEach(ch=>{
+    html+=`<div class="pdf-card"><h3><span>${ch.name}</span><span>${ch.pct}%</span></h3><ul>`+
+      ch.items.map(x=>{const est=x.estado||'Pendiente';const dep=predNames(x);
+        const detail=est==='Cerrado'?'':(est==='En curso'?` · ${x.pct||0}%`:(dep?` · Depende de: ${dep}`:` · Inicia: ${fmt(d(x.start))}`));
+        const note=x.nota?` — «${x.nota}»`:'';
+        return `<li><b>[${est}]</b> ${x.name} · Fin: ${fmt(d(x.end))}${detail}${note}</li>`;}).join('')+`</ul></div>`;});
+  document.getElementById('printArea').innerHTML=html;
+  window.print();}
+function sendReport(){
+  const to=(document.getElementById('mailto').value||'').trim();
+  if(!to){alert('Escribe el correo de destino en el recuadro.');return;}
+  const p=TASKS[0],today=todayD();
+  let body=`Presentación Gerencial — ${PROJECTS[cur].name}\nFecha: ${fmt(today)} · Avance global: ${p.pct}%\n\n`;
+  pdfChapters().forEach(ch=>{body+=`== ${ch.name} (${ch.pct}%) ==\n`;
+    ch.items.forEach(x=>{const est=x.estado||'Pendiente';const dep=predNames(x);
+      const detail=est==='Cerrado'?'':(est==='En curso'?` · ${x.pct||0}%`:(dep?` · Depende de: ${dep}`:` · Inicia: ${fmt(d(x.start))}`));
+      const note=x.nota?` — "${x.nota}"`:'';
+      body+=`  [${est}] ${x.name} · Fin: ${fmt(d(x.end))}${detail}${note}\n`;});
+    body+='\n';});
+  const subject='Informe gerencial — '+PROJECTS[cur].name;
+  window.location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);}
+
 // ==================== LANDING ====================
 function goLanding(){view='landing';selId=null;
   ['kpis','toolbar','gantt','present'].forEach(id=>document.getElementById(id).style.display='none');
@@ -690,6 +759,7 @@ function renderLanding(){const el=document.getElementById('plist');el.innerHTML=
     const color=NAMECOLOR[p.tasks[1]?p.tasks[1].name:'']||PALETTE[pi%PALETTE.length];
     const c2=PALETTE[pi%PALETTE.length];
     el.innerHTML+=`<div class="pcardL" onclick="openProject(${pi})">
+      <button class="delp" title="Eliminar proyecto" onclick="event.stopPropagation();deleteProject(${pi})">🗑</button>
       <div class="top" style="background:${c2}"></div>
       <div class="body"><div class="nm">${p.name}</div>
         <div class="mini">
@@ -715,6 +785,12 @@ function newProject(){const name=prompt('Nombre del nuevo proyecto (se copia la 
   if(t[0])t[0].name=name.trim()||'Nuevo proyecto';
   PROJECTS.push({id:'p'+(PROJECTS.length+1),name:t[0].name,tasks:t,collapsed:{}});
   saveState();renderLanding();}
+function deleteProject(pi){
+  if(PROJECTS.length<=1){alert('Debe quedar al menos un proyecto.');return;}
+  if(!confirm('¿Eliminar el proyecto "'+PROJECTS[pi].name+'"?\nEsta acción no se puede deshacer.'))return;
+  PROJECTS.splice(pi,1);
+  if(cur>=PROJECTS.length)cur=0;
+  bind();saveState();renderLanding();}
 
 document.getElementById('gr').addEventListener('scroll',function(){
   document.getElementById('rows').style.transform='translateY('+(-this.scrollTop)+'px)';});
