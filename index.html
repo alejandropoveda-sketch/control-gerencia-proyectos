@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Proyectos · Gerencia</title>
+<style>
+  :root{
+    --bg:#eef2f8; --card:#ffffff; --ink:#1f2a44; --muted:#6b7a99; --soft:#94a3bd;
+    --line:#e3e9f2; --line2:#eef2f8; --accent:#2563eb; --accent2:#eef4ff;
+    --ok:#16a34a; --okbg:#e8f7ee; --curso:#d97706; --cursobg:#fef4e6; --pend:#64748b; --pendbg:#f1f5f9;
+    --zebra:#f8fafd;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:13px}
+  header{position:sticky;top:0;z-index:40;background:var(--card);padding:10px 18px;
+    border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(30,50,90,.05)}
+  .brand{font-size:14px;font-weight:700;color:var(--accent);white-space:nowrap;cursor:pointer}
+  .brand span{color:var(--soft);font-weight:400}
+  #projName{font-size:15px;font-weight:700;color:var(--ink);border:1px solid transparent;background:transparent;
+    border-radius:7px;padding:4px 8px;min-width:220px}
+  #projName:hover{border-color:var(--line)} #projName:focus{border-color:var(--accent);background:#fff;outline:none}
+  .calbox{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .calbox input{background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:4px 6px}
+  .tabs{display:flex;gap:6px;margin-left:auto}
+  .tab{background:#fff;border:1px solid var(--line);color:var(--muted);padding:6px 14px;border-radius:8px;cursor:pointer}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .back{background:#fff;border:1px solid var(--line);color:var(--accent);padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+  .kpis{display:flex;gap:10px;padding:10px 18px;flex-wrap:wrap}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:118px;box-shadow:0 1px 3px rgba(30,50,90,.04)}
+  .kpi .v{font-size:18px;font-weight:700}.kpi .l{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+  /* toolbar */
+  .toolbar{display:flex;gap:6px;padding:8px 18px;background:var(--card);border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+  .toolbar button{background:#fff;border:1px solid var(--line);color:var(--ink);padding:6px 11px;border-radius:8px;cursor:pointer;font-size:12px}
+  .toolbar button:hover{background:var(--accent2);border-color:var(--accent)}
+  .toolbar .sep{width:1px;height:20px;background:var(--line);margin:0 5px}
+  .toolbar .info{color:var(--muted);font-size:11px;margin-left:auto}
+  /* GANTT */
+  #gantt{display:flex;height:calc(100vh - 205px);border-top:1px solid var(--line);position:relative}
+  .zoomctl{position:absolute;right:18px;bottom:16px;z-index:30;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;box-shadow:0 4px 14px rgba(30,50,90,.18);padding:6px 8px;display:flex;gap:6px;align-items:center;font-size:12px}
+  .zoomctl button{background:#fff;border:1px solid var(--line);color:var(--ink);width:28px;height:26px;border-radius:7px;cursor:pointer;font-size:14px;font-weight:700}
+  .zoomctl button.fit{width:auto;padding:0 10px;font-size:12px;font-weight:600}
+  .zoomctl button:hover{background:var(--accent2);border-color:var(--accent)}
+  .zoomctl #zlabel{min-width:74px;text-align:center;font-weight:700;color:var(--accent)}
+  .tl-top{display:flex;height:20px;border-bottom:1px solid var(--line)}
+  .tl-bot{display:flex;height:24px}
+  .tl-top .mcell{font-weight:700;color:var(--ink);height:20px}
+  .tl-bot .mcell{height:24px}
+  .grid-left{flex:0 0 900px;overflow:hidden;border-right:2px solid var(--line);background:var(--card)}
+  .grid-right{flex:1;overflow:auto;position:relative;background:var(--card)}
+  .cols{display:grid;grid-template-columns:30px minmax(250px,1fr) 110px 110px 48px 58px 88px 70px}
+  /* sub-fila de avance (meses/unidades) para fases medibles */
+  .subrow{height:34px;display:flex;align-items:center;border-bottom:1px solid var(--line2);background:#eaf1ff}
+  .subrow .box{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink);padding-left:56px}
+  .subrow .box label{color:var(--muted);font-weight:600}
+  .subrow input{width:54px;background:#fff;border:1px solid var(--line);border-radius:5px;padding:3px;font-size:11px;text-align:center;height:24px}
+  .subrow .u{color:var(--muted)} .subrow .p{font-weight:700;color:var(--accent)}
+  /* línea de HOY */
+  .today-line{position:absolute;top:0;width:2px;background:#ef4444;z-index:5}
+  .today-lbl{position:absolute;top:2px;transform:translateX(-50%);background:#ef4444;color:#fff;font-size:9px;
+    font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap;z-index:6}
+  .lhead,.rhead{height:44px;background:#f3f6fb;border-bottom:2px solid var(--line);position:sticky;top:0;z-index:20}
+  .lhead{align-items:center;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+  .lhead>div{padding:0 6px}
+  .row{align-items:center;min-height:34px;border-bottom:1px solid var(--line2);cursor:pointer}
+  .row:nth-child(even){background:var(--zebra)}
+  .row:hover{background:var(--accent2)}
+  .row.sel{background:#dbe7ff!important;box-shadow:inset 3px 0 0 var(--accent)}
+  .row.lvl1{background:#e8eefc;font-weight:700}
+  .row.summary{background:#f0f4fb;font-weight:600}
+  .row .num{font-size:10px;color:var(--soft);padding:0 4px;text-align:right}
+  .row .name{display:flex;align-items:center;gap:5px;overflow:hidden;min-width:0;padding-top:3px;padding-bottom:3px}
+  .row .name .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+  .row .name .dia{width:11px;height:11px;flex:0 0 auto;transform:rotate(45deg);border-radius:2px}
+  .row .name .nm{flex:1;min-width:0}
+  .row .name .nm textarea{width:100%;border:1px solid transparent;background:transparent;color:var(--ink);
+    font-family:inherit;font-size:11px;line-height:1.28;padding:2px 4px;resize:none;overflow:hidden;
+    border-radius:5px;display:block;font-weight:inherit}
+  .row .name .nm textarea:hover{border-color:var(--line)}
+  .row .name .nm textarea:focus{background:#fff;border-color:var(--accent);outline:none}
+  .caret{cursor:pointer;width:13px;text-align:center;color:var(--muted);flex:0 0 auto}
+  .cell{padding:0 4px;font-size:11px;color:var(--muted);overflow:hidden}
+  .row input,.row select{width:100%;background:#fff;border:1px solid var(--line);color:var(--ink);
+    border-radius:5px;padding:3px 3px;font-size:11px;height:24px}
+  .row .nm input{background:transparent;border:1px solid transparent;font-weight:inherit;padding:2px 4px;color:var(--ink)}
+  .row .nm input:hover{border-color:var(--line)} .row .nm input:focus{background:#fff;border-color:var(--accent);outline:none}
+  .row input:disabled,.row select:disabled{opacity:.55;border-color:transparent;background:transparent;color:var(--soft)}
+  .row input[type=date]{font-size:10px;padding:2px 3px}
+  .measure{display:flex;align-items:center;gap:2px}
+  .measure input{width:30px;text-align:center;padding:2px 1px}
+  .measure .u{font-size:9px;color:var(--muted);white-space:nowrap} .measure .p{font-weight:700;color:var(--accent);font-size:10px}
+  .st-sel[data-v="Cerrado"]{color:var(--ok);font-weight:600}
+  .st-sel[data-v="En curso"]{color:var(--curso);font-weight:600}
+  .row select.st-sel{font-size:10px;padding:3px 1px}
+  /* ruta de predecesoras (al seleccionar) */
+  .bar.crit,.milestone.crit{box-shadow:0 0 0 2px #ef4444, 0 1px 3px rgba(0,0,0,.3)}
+  .capbar.crit{box-shadow:0 0 0 2px #ef4444}
+  .row.inpath{background:#fff4f4!important}
+  .row.inpath .num{color:#ef4444;font-weight:700}
+  /* timeline */
+  .tl-months{display:flex;height:44px;align-items:flex-end}
+  .mcell{border-right:1px solid var(--line);font-size:10px;color:var(--muted);height:22px;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap}
+  .canvas{position:relative}
+  .barrow{position:relative;height:34px;border-bottom:1px solid var(--line2)}
+  .barrow:nth-child(even){background:var(--zebra)}
+  .bar{position:absolute;height:16px;top:8px;border-radius:5px;overflow:hidden;box-shadow:0 1px 2px rgba(30,50,90,.2)}
+  .bar .prog{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.55)}
+  .bar .lbl{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:10px;color:#fff;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+  .capbar{position:absolute;height:8px;top:12px;border-radius:3px}
+  .caplbl{position:absolute;top:9px;font-size:10px;color:var(--muted)}
+  .milestone{position:absolute;width:11px;height:11px;top:9px;transform:rotate(45deg);border-radius:2px;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .mslbl{position:absolute;top:9px;font-size:9px;color:var(--ink);font-weight:600;white-space:nowrap}
+  .mslbl .msd{color:var(--soft);font-size:8px;font-weight:500}
+  .gridline{position:absolute;top:0;bottom:0;width:1px;background:var(--line2)}
+  svg.deps{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+  /* PRESENTACION (board horizontal, pantalla completa) */
+  #present{display:none;padding:12px 14px 10px;height:calc(100vh - 62px);flex-direction:column;overflow:hidden}
+  #hbannerWrap{flex:0 0 auto}
+  .pboard{flex:1;display:flex;gap:14px;overflow-x:auto;overflow-y:hidden;align-items:stretch;padding-bottom:6px}
+  .pcard{flex:0 0 340px;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    box-shadow:0 2px 8px rgba(30,50,90,.06);display:flex;flex-direction:column}
+  .pcard h3{margin:0;padding:12px 16px;font-size:14px;display:flex;justify-content:space-between;align-items:center;flex:0 0 auto}
+  .pbar{height:6px;background:var(--line2);flex:0 0 auto}.pbar>i{display:block;height:100%}
+  .pcard ul{list-style:none;margin:0;padding:6px 0;overflow-y:auto;flex:1}
+  .pcard li{padding:7px 16px;border-bottom:1px solid var(--line2);display:flex;gap:9px;align-items:flex-start}
+  .pcard li:last-child{border-bottom:none}
+  .pcard .act{font-weight:600;font-size:12px}.pcard .st{color:var(--muted);font-size:11px}
+  .st .over{color:#ef4444;font-weight:700}
+  .tag{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap;flex:0 0 auto;margin-top:1px}
+  .tag.ok{background:var(--okbg);color:var(--ok)} .tag.curso{background:var(--cursobg);color:var(--curso)}
+  .tag.pend{background:var(--pendbg);color:var(--pend)}
+  .li-curso{background:var(--cursobg)}
+  .badge{font-size:10px;padding:2px 9px;border-radius:20px;font-weight:700}
+  .pnote{width:100%;margin-top:5px;background:#fff;border:1px solid var(--line);border-radius:6px;
+    padding:4px 7px;font-size:11px;color:var(--ink);font-family:inherit;line-height:1.32;
+    resize:none;overflow:hidden;display:block;min-height:26px}
+  .pnote:focus{border-color:var(--accent);outline:none}
+  .st .fin{color:var(--accent);font-weight:600}
+  /* actividad principal (grupo) del ítem */
+  .pgrp{font-size:9px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.3px;margin-bottom:1px}
+  /* barra para colapsar/expandir cerradas */
+  .closedtoggle{cursor:pointer;background:var(--pendbg);color:var(--muted);font-weight:700;
+    font-size:10px;padding:5px 16px!important;text-transform:uppercase;letter-spacing:.3px}
+  .closedtoggle:hover{background:#e7edf6}
+  .measbig{padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .measbig b{font-size:22px;color:var(--ink)} .measbig .u{color:var(--muted)}
+  .measbig input{width:64px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:13px}
+  .measfin{padding:0 16px 12px;color:var(--muted);font-size:11px}
+  /* hitos banner */
+  #hbannerWrap{margin-bottom:10px}
+  .hbanner{background:linear-gradient(90deg,#111827,#1f2937);color:#fff;border-radius:12px;padding:8px 12px}
+  .hb-t{font-size:11px;font-weight:700;margin-bottom:6px;letter-spacing:.4px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .pdfbtn{background:#fff;border:1px solid rgba(255,255,255,.3);color:#111827;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap}
+  .pdfbtn:hover{background:#e8eefc}
+  .hb-list{display:flex;gap:7px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+  .hb-item{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;
+    padding:4px 8px;display:flex;flex-direction:column;gap:1px;min-width:104px;flex:0 0 auto}
+  .hb-n{font-size:9.5px;font-weight:600;color:#fff;line-height:1.15}
+  .hb-d{font-size:11px;font-weight:700;color:#cbd5e1}
+  .hb-item .tag{align-self:flex-start;margin-top:2px;font-size:8px;padding:1px 5px}
+  /* splitter */
+  .splitter{flex:0 0 7px;cursor:col-resize;background:var(--line);position:relative}
+  .splitter:hover,.splitter.drag{background:var(--accent)}
+  .splitter::after{content:'⋮';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:11px}
+  /* LANDING */
+  #landing{display:none;padding:26px;overflow:auto;height:calc(100vh - 56px)}
+  #landing h2{margin:0 0 4px;font-size:20px}
+  #landing .sub{color:var(--muted);margin-bottom:20px}
+  .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+  .pcardL{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;
+    box-shadow:0 2px 10px rgba(30,50,90,.07);transition:transform .12s,box-shadow .12s}
+  .pcardL:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(30,50,90,.14)}
+  .pcardL .top{height:8px} .pcardL .body{padding:16px 18px}
+  .pcardL .nm{font-size:16px;font-weight:700;margin-bottom:10px}
+  .pcardL .mini{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+  .pcardL .mini div b{display:block;font-size:15px} .pcardL .mini div span{font-size:10px;color:var(--muted);text-transform:uppercase}
+  .pcardL .pr{height:7px;background:var(--line2);border-radius:6px;overflow:hidden}.pcardL .pr>i{display:block;height:100%}
+  .newcard{border:2px dashed var(--line);background:transparent;display:flex;align-items:center;justify-content:center;
+    min-height:150px;color:var(--accent);font-weight:700;font-size:15px;cursor:pointer;border-radius:16px}
+  .newcard:hover{background:var(--accent2);border-color:var(--accent)}
+  /* pantalla de clave */
+  #lock{position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#0f1826,#1a2c4d);display:flex;align-items:center;justify-content:center}
+  .lockbox{background:#fff;border-radius:16px;padding:30px 34px;width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+  .lktitle{font-size:18px;font-weight:800;color:var(--accent);margin-bottom:4px}
+  .lksub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .lockbox input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:10px}
+  .lockbox input:focus{outline:none;border-color:var(--accent)}
+  .lockbox button{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer}
+  .lockbox button:hover{background:#1d4ed8}
+  .lkerr{color:#ef4444;font-size:12px;margin-top:8px;min-height:16px}
+  /* controles de presentación (PDF / correo) */
+  .pcontrols{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;flex:0 0 auto}
+  .pbtn{background:#fff;border:1px solid var(--line);color:var(--accent);font-weight:700;padding:7px 12px;border-radius:9px;cursor:pointer;font-size:13px}
+  .pbtn:hover{background:var(--accent2);border-color:var(--accent)}
+  .pmail{border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13px;min-width:230px}
+  .pmail:focus{outline:none;border-color:var(--accent)}
+  /* botón eliminar proyecto en landing */
+  .pcardL{position:relative}
+  .delp{position:absolute;top:10px;right:10px;background:#fff;border:1px solid var(--line);color:#ef4444;
+    width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px;z-index:3;line-height:1}
+  .delp:hover{background:#fee2e2;border-color:#ef4444}
+  /* PDF (impresión de la presentación) */
+  #printArea{display:none}
+  @media print{
+    #lock,header,.kpis,#toolbar,#gantt,#present,#landing{display:none!important}
+    #printArea{display:block!important}
+    @page{margin:14mm}
+  }
+  #printArea{font-family:'Segoe UI',Arial,sans-serif;color:#1f2a44}
+  #printArea .pdf-h1{font-size:20px;font-weight:800;margin-bottom:2px}
+  #printArea .pdf-meta{color:#555;font-size:12px;margin-bottom:14px}
+  #printArea .pdf-card{border:1px solid #dde3ee;border-radius:8px;margin-bottom:12px;page-break-inside:avoid;overflow:hidden}
+  #printArea .pdf-card h3{background:#f0f4fb;margin:0;padding:8px 12px;font-size:14px;display:flex;justify-content:space-between}
+  #printArea .pdf-card ul{list-style:none;margin:0;padding:6px 12px}
+  #printArea .pdf-card li{padding:4px 0;border-bottom:1px solid #eef1f6;font-size:12px}
+  #printArea .pdf-card li:last-child{border-bottom:none}
+</style>
+</head>
+<body>
+<div id="lock">
+  <div class="lockbox">
+    <div class="lktitle">◧ Control de Proyectos</div>
+    <div class="lksub">Ingresa la clave de acceso</div>
+    <input type="password" id="lkpass" placeholder="Clave" onkeydown="if(event.key==='Enter')tryUnlock()" autofocus>
+    <button onclick="tryUnlock()">Entrar</button>
+    <div id="lkerr" class="lkerr"></div>
+  </div>
+</div>
+<header>
+  <div class="brand" onclick="goLanding()">◧ Control de Proyectos <span>· Gerencia</span></div>
+  <span id="syncst" style="font-size:11px;color:var(--muted)">…</span>
+  <input id="projName" onchange="renameProject(this.value)" style="display:none">
+  <div class="calbox" id="calWrap" style="display:none">📅 Inicio calendario:
+    <input type="date" id="calStart" onchange="setCalStart(this.value)"></div>
+  <button class="back" id="backBtn" style="display:none" onclick="goLanding()">← Proyectos</button>
+  <div class="tabs" id="viewTabs" style="display:none">
+    <button class="tab active" id="tabG" onclick="showView('gantt')">Gantt</button>
+    <button class="tab" id="tabP" onclick="showView('present')">Presentación Gerencial</button>
+  </div>
+</header>
+
+<!-- LANDING -->
+<div id="landing">
+  <h2>Mis proyectos</h2>
+  <div class="sub">Selecciona un proyecto para abrir su Gantt y su presentación gerencial. Los cambios se guardan solos en la nube.</div>
+  <div class="plist" id="plist"></div>
+</div>
+
+<!-- EDITOR -->
+<div class="kpis" id="kpis" style="display:none"></div>
+<div class="toolbar" id="toolbar" style="display:none">
+  <button onclick="addTask()">＋ Actividad</button>
+  <button onclick="delTask()">🗑 Quitar</button>
+  <span class="sep"></span>
+  <button onclick="indent(1)" title="Sangría">→ Sangría</button>
+  <button onclick="indent(-1)" title="Reducir sangría">← Reducir</button>
+  <span class="sep"></span>
+  <button onclick="move(-1)">↑ Subir</button>
+  <button onclick="move(1)">↓ Bajar</button>
+  <span class="sep"></span>
+  <button onclick="expandAll(true)">Expandir</button>
+  <button onclick="expandAll(false)">Colapsar</button>
+  <span class="info" id="selInfo">Selecciona una fila para editarla</span>
+</div>
+
+<div id="gantt" style="display:none">
+  <div class="grid-left">
+    <div class="lhead cols">
+      <div>#</div><div>Actividad</div><div>Inicio</div><div>Fin</div><div>Dur</div><div>Avance</div><div>Estado</div><div>Pred.</div>
+    </div>
+    <div id="rows"></div>
+  </div>
+  <div class="splitter" id="splitter"></div>
+  <div class="grid-right" id="gr">
+    <div class="rhead" id="rhead"></div>
+    <div class="canvas" id="canvas"></div>
+  </div>
+  <div class="zoomctl">
+    <button onclick="zoom(-1)" title="Alejar (ver más tiempo)">−</button>
+    <span id="zlabel">Meses</span>
+    <button onclick="zoom(1)" title="Acercar (ver a detalle)">＋</button>
+    <button class="fit" onclick="zoomFit()" title="Ajustar todo a la pantalla">Ajustar</button>
+  </div>
+</div>
+
+<div id="present">
+  <div id="hbannerWrap"></div>
+  <div class="pboard" id="pboard"></div>
+</div>
+<div id="printArea"></div>
+
+<script>
+const BASE = [{"id": 1, "level": 1, "name": "7 ESTORIAS GERENCIA", "baseStart": "2022-07-19", "dur": 744, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 100, "level": 2, "name": "HITOS CLAVE", "baseStart": "2023-09-19", "dur": 1, "pred": [], "pct": 0, "estado": "", "type": "tarea"}, {"id": 101, "level": 3, "name": "Salida a ventas", "baseStart": "2023-09-19", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 102, "level": 3, "name": "Inicio de obra", "baseStart": "2024-03-01", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 103, "level": 3, "name": "Inicio de escrituración", "baseStart": "2025-06-02", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 104, "level": 3, "name": "RPH registrado", "baseStart": "2024-06-26", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 105, "level": 3, "name": "CTO (Certificado Técnico de Ocupación)", "baseStart": "2025-06-27", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 106, "level": 3, "name": "Póliza decenal", "baseStart": "2025-06-27", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 107, "level": 3, "name": "Punto de equilibrio", "baseStart": "2023-11-24", "dur": 0, "pred": [], "pct": 0, "estado": "Pendiente", "type": "hito"}, {"id": 2, "level": 2, "name": "JURIDICO Y LOTE", "baseStart": "2022-10-10", "dur": 687, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 3, "level": 3, "name": "Fideicomiso de Parqueo", "baseStart": "2022-10-10", "dur": 10, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 4, "level": 3, "name": "Transferencia Lote al fideicomiso Parqueo", "baseStart": "2022-11-28", "dur": 15, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 5, "level": 4, "name": "Salida escritura de registro", "baseStart": "2022-11-28", "dur": 15, "pred": [3], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 6, "level": 3, "name": "Fideicomiso de Contrato de Preventas", "baseStart": "2022-11-08", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 7, "level": 4, "name": "Contrato fiduciario preventa", "baseStart": "2022-11-08", "dur": 33, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 8, "level": 4, "name": "Contrato de adhesion modelo fiduciario", "baseStart": "2022-11-08", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 9, "level": 4, "name": "Declaro conocer y formulario separacion G Accanto", "baseStart": "2022-11-08", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 10, "level": 3, "name": "Promesa de compraventa mayor VIS - Uso dotacional de bienestar social", "baseStart": "2023-02-20", "dur": 55, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 11, "level": 4, "name": "Elaboración promesa para Uso Dotacional", "baseStart": "2023-02-20", "dur": 55, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 12, "level": 3, "name": "Modelo escrituración apartamentos", "baseStart": "2023-05-12", "dur": 50, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 13, "level": 4, "name": "Elaboración minuta de escrituración", "baseStart": "2023-05-12", "dur": 50, "pred": [11], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 14, "level": 3, "name": "Fideicomiso de mejoras", "baseStart": "2023-05-02", "dur": 100, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 15, "level": 4, "name": "Constituir fideicomiso mejoras", "baseStart": "2023-05-02", "dur": 100, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 16, "level": 3, "name": "Fideicomiso Inmobiliario completo", "baseStart": "2025-01-01", "dur": 15, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 17, "level": 4, "name": "Cesión derechos a 7 ESTORIAS S.A.S", "baseStart": "2025-01-08", "dur": 10, "pred": [18], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 18, "level": 4, "name": "Otrosi Integral Fideicomiso Parqueo y Preventas", "baseStart": "2025-01-01", "dur": 5, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 19, "level": 3, "name": "Reglamento de propiedad horizontal Uso Dotacional", "baseStart": "2023-08-15", "dur": 225, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 20, "level": 4, "name": "Elaboración minuta de RPH", "baseStart": "2023-08-15", "dur": 170, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 21, "level": 4, "name": "Matriculas individuales sale registro", "baseStart": "2024-04-11", "dur": 55, "pred": [20], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 22, "level": 3, "name": "Desenglobe IDU y Paz y Salvo valorización matriculas individuales", "baseStart": "2024-06-27", "dur": 15, "pred": [21], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 23, "level": 3, "name": "Manual de propietario", "baseStart": "2025-01-07", "dur": 60, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 24, "level": 3, "name": "Administracion provisional - personeria juridica en alcaldia", "baseStart": "2025-06-02", "dur": 15, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 25, "level": 2, "name": "ESTUDIOS Y DISEÑOS", "baseStart": "2022-10-12", "dur": 250, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 26, "level": 3, "name": "Fichas de venta Planos ventas para clientes Promesa", "baseStart": "2023-01-12", "dur": 60, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 27, "level": 3, "name": "Definir distribucion locales comerciales", "baseStart": "2023-06-01", "dur": 65, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 28, "level": 3, "name": "Coordinacion tecnica proyecto arquitectonico", "baseStart": "2023-02-02", "dur": 125, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 29, "level": 3, "name": "Estudio acustico cumplir norma en los apartamentos", "baseStart": "2022-10-12", "dur": 20, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 30, "level": 3, "name": "Combos de acabados", "baseStart": "2023-09-11", "dur": 30, "pred": [27], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 31, "level": 2, "name": "COMERCIAL", "baseStart": "2022-11-28", "dur": 319, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 32, "level": 3, "name": "Lista de precios SMMLV para todo el proyecto", "baseStart": "2022-11-28", "dur": 15, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 33, "level": 3, "name": "Punto equilibrio fiduciaria", "baseStart": "2023-10-20", "dur": 25, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 34, "level": 3, "name": "Firma promesas", "baseStart": "2024-01-15", "dur": 40, "pred": [33], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 35, "level": 2, "name": "LICENCIAS Y PERMISOS", "baseStart": "2022-08-01", "dur": 456, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 36, "level": 3, "name": "Licencia inicial", "baseStart": "2022-08-01", "dur": 149, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 37, "level": 3, "name": "1er Modificación licencia proyecto real", "baseStart": "2023-03-24", "dur": 92, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 38, "level": 3, "name": "Cambio titular licencia", "baseStart": "2023-07-11", "dur": 1, "pred": [37], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 39, "level": 3, "name": "2da modificación de licencia planos de propiedad horizontal", "baseStart": "2024-02-12", "dur": 75, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 40, "level": 3, "name": "Permiso de enajeacion", "baseStart": "2023-08-15", "dur": 25, "pred": [37], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 41, "level": 2, "name": "FINANCIERO", "baseStart": "2022-07-19", "dur": 339, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 42, "level": 3, "name": "Liberación recursos desembolso preventa", "baseStart": "2023-11-24", "dur": 5, "pred": [33], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 43, "level": 3, "name": "Crédito constructor aprobado", "baseStart": "2022-07-19", "dur": 201, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 44, "level": 4, "name": "Presentacion credito bancos", "baseStart": "2023-02-10", "dur": 60, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 45, "level": 4, "name": "Hipoteca Lote a favor de Banco", "baseStart": "2022-07-19", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 46, "level": 3, "name": "Factibilidad tipo B", "baseStart": "2022-12-05", "dur": 10, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 47, "level": 3, "name": "Presupuesto Costo directo Tipo C", "baseStart": "2023-08-11", "dur": 55, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 48, "level": 3, "name": "Factibilidad tipo C", "baseStart": "2023-11-01", "dur": 15, "pred": [47], "pct": 0, "estado": "Pendiente", "type": "tarea"}, {"id": 49, "level": 2, "name": "Construccion", "baseStart": "2024-03-01", "dur": 346, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea", "medida": {"tipo": "meses", "meta": 16, "avance": 0}}, {"id": 50, "level": 2, "name": "Ventas", "baseStart": "2022-02-11", "dur": 634, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea", "medida": {"tipo": "unidades", "meta": 120, "avance": 0}}, {"id": 51, "level": 2, "name": "Escrituración", "baseStart": "2025-06-02", "dur": 45, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea", "medida": {"tipo": "unidades", "meta": 120, "avance": 0}}, {"id": 52, "level": 2, "name": "Entregas", "baseStart": "2025-06-02", "dur": 70, "pred": [], "pct": 0, "estado": "Pendiente", "type": "tarea", "medida": {"tipo": "unidades", "meta": 120, "avance": 0}}];
+const PALETTE=['#2563eb','#7c3aed','#059669','#d97706','#db2777','#0891b2','#ca8a04','#65a30d','#e11d48','#0284c7'];
+const NAMECOLOR={"HITOS CLAVE":'#111827',"JURIDICO Y LOTE":'#2563eb',"ESTUDIOS Y DISEÑOS":'#7c3aed',
+  "COMERCIAL":'#059669',"LICENCIAS Y PERMISOS":'#d97706',"FINANCIERO":'#db2777',"Construccion":'#0891b2',
+  "Ventas":'#ca8a04',"Escrituración":'#65a30d',"Entregas":'#e11d48'};
+let PXDAY=2.6;
+const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function escT(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function autoGrow(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';syncLayout();}
+// ---- escala de tiempo (días/semanas/meses/trimestres/semestres/años) ----
+const ZOOMPX=[0.32,0.6,1.15,2.6,9,20]; // años · semestres · trimestres · meses · semanas · días
+const UNITNAME={dias:'Días',semanas:'Semanas',meses:'Meses',trimestres:'Trimestres',semestres:'Semestres',anios:'Años'};
+const PARENT={dias:'meses',semanas:'meses',meses:'anios',trimestres:'anios',semestres:'anios',anios:null};
+function scaleUnit(){
+  if(PXDAY>=15)return 'dias';
+  if(PXDAY>=5.5)return 'semanas';
+  if(PXDAY>=1.6)return 'meses';
+  if(PXDAY>=0.85)return 'trimestres';
+  if(PXDAY>=0.45)return 'semestres';
+  return 'anios';}
+function periodSegments(kind){
+  const segs=[],end=new Date(MAX);
+  const startOf=dt=>{const y=dt.getFullYear(),m=dt.getMonth(),d0=dt.getDate();
+    if(kind==='dias')return new Date(y,m,d0);
+    if(kind==='semanas')return new Date(y,m,d0);
+    if(kind==='meses')return new Date(y,m,1);
+    if(kind==='trimestres')return new Date(y,Math.floor(m/3)*3,1);
+    if(kind==='semestres')return new Date(y,m<6?0:6,1);
+    return new Date(y,0,1);};
+  const nextOf=dt=>{const y=dt.getFullYear(),m=dt.getMonth();
+    if(kind==='dias'){const n=new Date(dt);n.setDate(n.getDate()+1);return n;}
+    if(kind==='semanas'){const n=new Date(dt);n.setDate(n.getDate()+7);return n;}
+    if(kind==='meses')return new Date(y,m+1,1);
+    if(kind==='trimestres')return new Date(y,Math.floor(m/3)*3+3,1);
+    if(kind==='semestres')return new Date(y,m<6?6:12,1);
+    return new Date(y+1,0,1);};
+  const label=dt=>{const y=String(dt.getFullYear()).slice(2),m=dt.getMonth();
+    if(kind==='dias')return dt.getDate();
+    if(kind==='semanas')return dt.getDate()+'/'+(m+1);
+    if(kind==='meses')return MESES[m]+' '+y;
+    if(kind==='trimestres')return 'T'+(Math.floor(m/3)+1)+' '+y;
+    if(kind==='semestres')return 'S'+(m<6?1:2)+' '+y;
+    return dt.getFullYear();};
+  let c=startOf(new Date(MIN));
+  while(c<=end){const nx=nextOf(c);
+    const x=Math.round((c-MIN)/86400000*PXDAY),x2=Math.round((nx-MIN)/86400000*PXDAY);
+    segs.push({x,w:Math.max(1,x2-x),label:label(c)});c=nx;}
+  return segs;}
+function zoom(dir){let cur=0,best=1e9;ZOOMPX.forEach((p,i)=>{if(Math.abs(p-PXDAY)<best){best=Math.abs(p-PXDAY);cur=i;}});
+  const ni=Math.min(ZOOMPX.length-1,Math.max(0,cur+dir));PXDAY=ZOOMPX[ni];render();}
+function zoomFit(){const gr=document.getElementById('gr');const avail=(gr.clientWidth||1000)-24;
+  schedule();computeRange();PXDAY=Math.max(0.22,Math.min(24,avail/TOTAL));render();}
+
+// -------- multi-proyecto --------
+function cloneTasks(src){return src.map(t=>({...t,pred:(t.pred||[]).slice(),medida:t.medida?{...t.medida}:undefined}));}
+let PROJECTS=[{id:'p1',name:'7 ESTORIAS GERENCIA',tasks:cloneTasks(BASE),collapsed:{}}];
+let cur=0, view='landing', selId=null, CRIT=new Set();
+let TASKS, collapsed;
+function bind(){TASKS=PROJECTS[cur].tasks;collapsed=PROJECTS[cur].collapsed;}
+// -------- persistencia: CADA proyecto en su propia fila (así un usuario no pisa a otro) --------
+const KEY='gestorProyectos_v1';
+const uid=()=>'p_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
+function normProject(pr){pr.collapsed=pr.collapsed||{};if(!pr.id)pr.id=uid();
+  if(!pr.createdAt)pr.createdAt=Date.now();
+  (pr.tasks||[]).forEach(t=>{if(!t.pred)t.pred=[];if(!t.plag)t.plag={};});return pr;}
+function cacheLocal(){try{localStorage.setItem(KEY,JSON.stringify(PROJECTS));}catch(e){}}
+function saveState(){cacheLocal();if(view!=='landing'&&PROJECTS[cur])cloudSaveProject(PROJECTS[cur]);}
+// -------- sincronización en la nube (Supabase) --------
+const SB_URL='https://usxqxflhzfmyqnsbhxuk.supabase.co';
+const SB_KEY='sb_publishable_dwOSkwohTHeB4hCQiw5xVg_PW8Mehsi';
+const SB_HEADERS={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+function setSync(txt,color){const el=document.getElementById('syncst');if(el){el.textContent=txt;el.style.color=color||'var(--muted)';}}
+const saveTimers={};
+function cloudSaveProject(pr){if(!pr||!pr.id)return;pr.updatedAt=Date.now();
+  clearTimeout(saveTimers[pr.id]);setSync('sincronizando…','var(--curso)');
+  const snap=JSON.stringify(pr);
+  saveTimers[pr.id]=setTimeout(async()=>{
+    try{const r=await fetch(SB_URL+'/rest/v1/estado',{method:'POST',
+        headers:Object.assign({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},SB_HEADERS),
+        body:'['+JSON.stringify({id:pr.id,data:JSON.parse(snap),updated_at:new Date().toISOString()})+']'});
+      setSync(r.ok?'guardado en la nube ✓':'error al guardar',r.ok?'var(--ok)':'#ef4444');
+    }catch(e){setSync('sin conexión (queda local)','#ef4444');}
+  },700);}
+function cloudDeleteProject(pid){ // marca como borrado (tombstone) — no depende de permiso DELETE
+  try{fetch(SB_URL+'/rest/v1/estado',{method:'POST',
+    headers:Object.assign({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},SB_HEADERS),
+    body:JSON.stringify([{id:pid,data:{deleted:true},updated_at:new Date().toISOString()}])});}catch(e){}}
+async function fetchAllProjects(){
+  const r=await fetch(SB_URL+'/rest/v1/estado?select=id,data,updated_at',{headers:SB_HEADERS});
+  if(!r.ok)return null;const rows=await r.json();
+  return rows.filter(x=>x&&x.data&&!x.data.deleted&&Array.isArray(x.data.tasks))
+    .map(x=>{const pr=x.data;pr.id=x.id;return normProject(pr);});}
+async function cloudLoad(){
+  try{
+    let list=await fetchAllProjects();
+    if(list===null)return 'error';
+    if(list.length){list.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));PROJECTS=list;return 'data';}
+    // MIGRACIÓN: si aún no hay filas por-proyecto, partir el bloque viejo 'main'
+    const rm=await fetch(SB_URL+'/rest/v1/estado?id=eq.main&select=data',{headers:SB_HEADERS});
+    if(rm.ok){const rows=await rm.json();const data=rows&&rows[0]?rows[0].data:null;
+      if(Array.isArray(data)&&data.length){
+        data.forEach((pr,i)=>{normProject(pr);pr.createdAt=1700000000000+i;}); // orden estable e idéntico para todos
+        PROJECTS=data;PROJECTS.forEach(pr=>cloudSaveProject(pr)); // siembra filas por-proyecto (idempotente)
+        return 'data';}}
+    return 'empty';
+  }catch(e){return 'error';}}
+function loadState(){try{const s=localStorage.getItem(KEY);if(s){const p=JSON.parse(s);
+  if(Array.isArray(p)&&p.length){PROJECTS=p.map(normProject);return true;}}}catch(e){}return false;}
+// -------- refresco periódico: recibe proyectos nuevos/actualizados sin pisar el que estás editando --------
+let polling=false;
+async function cloudPoll(){if(polling)return;polling=true;
+  try{
+    const list=await fetchAllProjects();
+    if(list){
+      const openId=(view!=='landing'&&PROJECTS[cur])?PROJECTS[cur].id:null;
+      const cloudIds=new Set(list.map(p=>p.id));
+      const merged=list.map(p=>p.id===openId?PROJECTS[cur]:p); // nunca sobreescribe el proyecto abierto
+      if(openId&&!cloudIds.has(openId))merged.push(PROJECTS[cur]);
+      merged.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+      PROJECTS=merged;
+      cur=openId?PROJECTS.findIndex(p=>p.id===openId):Math.min(cur,PROJECTS.length-1);
+      if(cur<0)cur=0;
+      bind();cacheLocal();
+      if(view==='landing')renderLanding();
+    }
+  }catch(e){}
+  polling=false;}
+function exportData(){const blob=new Blob([JSON.stringify(PROJECTS,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='proyectos_'+iso(new Date())+'.json';document.body.appendChild(a);a.click();a.remove();}
+function importData(file){if(!file)return;const r=new FileReader();
+  r.onload=e=>{try{const p=JSON.parse(e.target.result);
+    if(Array.isArray(p)&&p.length){p.forEach(pr=>{normProject(pr);pr.id=uid();pr.createdAt=Date.now();PROJECTS.push(pr);cloudSaveProject(pr);});
+      cacheLocal();renderLanding();alert('Copia importada: '+p.length+' proyecto(s).');}
+    else alert('El archivo no tiene el formato esperado.');}
+  catch(err){alert('No se pudo leer el archivo.');}};
+  r.readAsText(file);}
+
+const nextId=()=>Math.max(...TASKS.map(t=>t.id))+1;
+const idx=id=>TASKS.findIndex(t=>t.id===id);
+const byId=id=>TASKS.find(t=>t.id===id);
+
+// -------- fechas --------
+function d(s){const [y,m,dd]=s.split('-').map(Number);return new Date(y,m-1,dd);}
+function iso(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+function fmt(dt){return dt.getDate()+'/'+(dt.getMonth()+1)+'/'+String(dt.getFullYear()).slice(2);}
+
+// ===== Festivos de Colombia (Ley Emiliani + Pascua) — se calculan para cualquier año =====
+function easter(y){ // algoritmo de Gauss/Meeus
+  const a=y%19,b=Math.floor(y/100),c=y%100,dd=Math.floor(b/4),e=b%4,
+    f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-dd-g+15)%30,
+    i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+    mon=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;
+  return new Date(y,mon-1,day);}
+function toMonday(dt){const x=new Date(dt);x.setDate(x.getDate()+((1-x.getDay()+7)%7));return x;} // traslada a lunes siguiente
+const HOLIC={};
+function coHolidays(y){
+  const S=new Set(),add=dt=>S.add(iso(dt));
+  [[0,1],[4,1],[6,20],[7,7],[11,8],[11,25]].forEach(([m,day])=>add(new Date(y,m,day)));         // fijos
+  [[0,6],[2,19],[5,29],[7,15],[9,12],[10,1],[10,11]].forEach(([m,day])=>add(toMonday(new Date(y,m,day)))); // Emiliani → lunes
+  const e=easter(y),off=n=>{const x=new Date(e);x.setDate(x.getDate()+n);return x;};
+  [-3,-2,43,64,71].forEach(n=>add(off(n))); // J.Santo, V.Santo, Ascensión, Corpus, S.Corazón (ya trasladados)
+  return S;}
+function isHoliday(dt){const y=dt.getFullYear();if(!HOLIC[y])HOLIC[y]=coHolidays(y);return HOLIC[y].has(iso(dt));}
+function isWorkday(dt){const w=dt.getDay();return w!==0&&w!==6&&!isHoliday(dt);}
+function firstWork(dt){let x=new Date(dt);while(!isWorkday(x))x.setDate(x.getDate()+1);return x;}   // si cae no hábil, pasa al siguiente hábil
+function nextWork(dt){let x=new Date(dt);do{x.setDate(x.getDate()+1);}while(!isWorkday(x));return x;}
+function addWork(start,days){let x=firstWork(new Date(start)),rem=Math.max(1,Math.round(days))-1;
+  while(rem>0){x.setDate(x.getDate()+1);if(isWorkday(x))rem--;}return x;}
+function bizDays(a,b){let x=firstWork(new Date(a)),e=new Date(b);if(e<x)return 1;let n=0;
+  while(x<=e){if(isWorkday(x))n++;x.setDate(x.getDate()+1);}return Math.max(1,n);}
+
+// -------- outline --------
+function isSummary(i){return i+1<TASKS.length && TASKS[i+1].level>TASKS[i].level;}
+function descendants(i){const lvl=TASKS[i].level,out=[];
+  for(let j=i+1;j<TASKS.length&&TASKS[j].level>lvl;j++)out.push(j);return out;}
+function groupColor(i){let lvl=TASKS[i].level;
+  if(lvl<=2)return NAMECOLOR[TASKS[i].name]||PALETTE[i%PALETTE.length];
+  for(let j=i;j>=0;j--)if(TASKS[j].level===2)return NAMECOLOR[TASKS[j].name]||PALETTE[j%PALETTE.length];
+  return PALETTE[i%PALETTE.length];}
+function wbsMap(){const c=[],map={};
+  TASKS.forEach(t=>{const L=t.level;if(L===1){map[t.id]='';return;}
+    c[L]=(c[L]||0)+1;for(let k=L+1;k<c.length;k++)c[k]=0;
+    const parts=[];for(let k=2;k<=L;k++)parts.push(c[k]||1);map[t.id]=parts.join('.');});
+  return map;}
+
+// -------- scheduler --------
+function mpct(t){if(t.medida&&t.medida.meta>0)return Math.min(100,Math.round(t.medida.avance/t.medida.meta*100));return t.pct||0;}
+function schedule(){
+  const leafIdx=TASKS.map((_,i)=>i).filter(i=>!isSummary(i));
+  for(let pass=0;pass<10;pass++){
+    leafIdx.forEach(i=>{const t=TASKS[i];let start=firstWork(d(t.baseStart));
+      if(t.pred&&t.pred.length&&!t.manualStart){let best=null;t.pred.forEach(p=>{const pt=byId(p);if(pt&&pt.end){const L=(t.plag&&t.plag[p])||0;let c=d(pt.end);const steps=Math.max(1,L);for(let k=0;k<steps;k++)c=nextWork(c);if(!best||c>best)best=c;}});if(best)start=best;}
+      t.start=iso(start);
+      t.end = t.type==='hito' ? iso(start) : iso(addWork(start,t.dur));
+      if(t.medida)t.pct=mpct(t); else if(t.estado==='Cerrado')t.pct=100;
+    });
+  }
+  const sums=TASKS.map((_,i)=>i).filter(isSummary).sort((a,b)=>TASKS[b].level-TASKS[a].level);
+  sums.forEach(i=>{let mn=null,mx=null,sd=0,sp=0;
+    descendants(i).filter(j=>!isSummary(j)).forEach(j=>{const t=TASKS[j],s=d(t.start),f=d(t.end);
+      if(!mn||s<mn)mn=s;if(!mx||f>mx)mx=f;const wgt=(t.dur||1);sd+=wgt;sp+=wgt*(t.pct||0);});
+    if(mn){TASKS[i].start=iso(mn);TASKS[i].end=iso(mx);TASKS[i].dur=bizDays(mn,mx);TASKS[i].pct=sd?Math.round(sp/sd):0;}});
+}
+function projStats(){const p=TASKS[0];const leaves=TASKS.filter((_,i)=>!isSummary(i));
+  return {pct:p.pct,ini:p.start,fin:p.end,nAct:leaves.filter(t=>t.type!=='hito').length,nHitos:leaves.filter(t=>t.type==='hito').length,
+    nCap:TASKS.filter(t=>t.level===2).length};}
+
+// -------- rango --------
+let MIN,MAX,TOTAL;
+function todayD(){const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate());}
+function computeRange(){let mn=null,mx=null;TASKS.forEach(t=>{const s=d(t.start),f=d(t.end);if(!mn||s<mn)mn=s;if(!mx||f>mx)mx=f;});
+  const td=todayD();if(td<mn)mn=td;if(td>mx)mx=td;
+  MIN=new Date(mn.getFullYear(),mn.getMonth(),1);MAX=new Date(mx.getFullYear(),mx.getMonth()+1,0);
+  TOTAL=Math.round((MAX-MIN)/86400000)+1;}
+const xOf=s=>Math.round((d(s)-MIN)/86400000*PXDAY);
+const wOf=(a,b)=>Math.max(6,Math.round((d(b)-d(a))/86400000*PXDAY)+PXDAY);
+
+// -------- visibilidad --------
+function visibleIdx(){const out=[];let hideUntil=-1;
+  for(let i=0;i<TASKS.length;i++){
+    if(hideUntil>=0){if(TASKS[i].level>hideUntil)continue;else hideUntil=-1;}
+    out.push(i);if(isSummary(i)&&collapsed[TASKS[i].id])hideUntil=TASKS[i].level;}
+  return out;}
+
+// ==================== RENDER EDITOR ====================
+function render(){
+  schedule();computeRange();
+  const st=projStats();
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="v">${st.pct}%</div><div class="l">Avance global</div></div>
+    <div class="kpi"><div class="v">${fmt(d(st.ini))}</div><div class="l">Inicio</div></div>
+    <div class="kpi"><div class="v">${fmt(d(st.fin))}</div><div class="l">Fin</div></div>
+    <div class="kpi"><div class="v">${st.nAct}</div><div class="l">Actividades</div></div>
+    <div class="kpi"><div class="v">${st.nHitos}</div><div class="l">Hitos</div></div>`;
+  document.getElementById('calStart').value=st.ini;
+  document.getElementById('projName').value=PROJECTS[cur].name;
+
+  const width=TOTAL*PXDAY;
+  const unit=scaleUnit();
+  const zl=document.getElementById('zlabel');if(zl)zl.textContent=UNITNAME[unit];
+  const botSegs=periodSegments(unit);
+  const parent=PARENT[unit];
+  const topSegs=parent?periodSegments(parent):null;
+  let hh='';
+  if(topSegs)hh+='<div class="tl-top" style="width:'+width+'px">'+topSegs.map(s=>`<div class="mcell" style="width:${s.w}px">${s.label}</div>`).join('')+'</div>';
+  hh+='<div class="tl-bot" style="width:'+width+'px">'+botSegs.map(s=>`<div class="mcell" style="width:${s.w}px">${s.label}</div>`).join('')+'</div>';
+  const rhead=document.getElementById('rhead');rhead.style.width=width+'px';rhead.innerHTML=hh;
+
+  const rows=document.getElementById('rows'),canvas=document.getElementById('canvas');
+  rows.innerHTML='';canvas.innerHTML='';canvas.style.width=width+'px';
+  botSegs.forEach(s=>{const gl=document.createElement('div');gl.className='gridline';gl.style.left=s.x+'px';canvas.appendChild(gl);});
+
+  const wm=wbsMap();
+  const vis=visibleIdx();
+  const rowPos={};let rowCount=0;LEFTELS=[];RIGHTELS=[];
+  vis.forEach(i=>{
+    const t=TASKS[i],sum=isSummary(i),color=groupColor(i),leaf=!sum,edit=leaf&&t.level>1,hito=t.type==='hito';
+    const inPath=CRIT.has(t.id)||t.id===selId;
+    // ---- fila ----
+    const r=document.createElement('div');
+    r.className='row cols'+(t.level===1?' lvl1':sum?' summary':'')+(t.id===selId?' sel':'')+(CRIT.has(t.id)?' inpath':'');
+    r.onclick=e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)||e.target.classList.contains('caret'))return;select(t.id);};
+    const pad=(t.level-1)*15;
+    const caret=sum?`<span class="caret" onclick="toggle(${t.id})">${collapsed[t.id]?'▸':'▾'}</span>`:'<span class="caret"></span>';
+    const marker=hito?`<span class="dia" style="background:${color}"></span>`:`<span class="dot" style="background:${color}"></span>`;
+    const startEditable=edit||hito;
+    // avance cell
+    let avc='';
+    if(hito){avc='<span style="color:var(--soft)">hito</span>';}
+    else if(t.medida){avc=`<span class="p" style="color:var(--accent);font-weight:700">${mpct(t)}%</span>`;}
+    else if(edit){avc=`<input type="number" min="0" max="100" value="${t.pct}" onchange="setPct(${t.id},this.value)">`;}
+    else{avc=`<span class="p" style="color:var(--muted)">${t.pct}%</span>`;}
+    r.innerHTML=`
+      <div class="num">${wm[t.id]||''}</div>
+      <div class="name" style="padding-left:${pad}px">${caret}${marker}
+        <span class="nm"><textarea rows="1" oninput="autoGrow(this)" onchange="setName(${t.id},this.value)">${escT(t.name)}</textarea></span></div>
+      <div class="cell"><input type="date" value="${t.start}" ${startEditable?'':'disabled'} onchange="setStart(${t.id},this.value)"></div>
+      <div class="cell"><input type="date" value="${t.end}" ${(edit&&!hito)?'':'disabled'} onchange="setEnd(${t.id},this.value)"></div>
+      <div class="cell">${hito?'<span style="color:var(--soft)">◆</span>':(edit?`<input type="number" min="1" value="${Math.round(t.dur)}" onchange="setDur(${t.id},this.value)">`:'<span style="color:var(--soft)">'+Math.round(t.dur)+'</span>')}</div>
+      <div class="cell">${avc}</div>
+      <div class="cell">${(edit||hito)?`<select class="st-sel" data-v="${t.estado}" onchange="setEst(${t.id},this.value)">
+        ${['Pendiente','En curso','Cerrado'].map(o=>`<option ${t.estado===o?'selected':''}>${o}</option>`).join('')}</select>`:''}</div>
+      <div class="cell">${(edit||hito)?`<input value="${(t.pred||[]).map(p=>(wm[p]||p)+((t.plag&&t.plag[p])?'+'+t.plag[p]:'')).join(', ')}" placeholder="ej: 2.1+12" title="Predecesoras por su #. Suma días hábiles con +. Ej: 2.1+12 = empieza 12 días después de que termine 2.1. Varias con coma: 2.1, 2.3+5" onchange="setPred(${t.id},this.value)">`:''}</div>`;
+    rows.appendChild(r);
+    // ---- barra ----
+    const br=document.createElement('div');br.className='barrow';
+    const x=xOf(t.start),w=wOf(t.start,t.end);
+    if(hito){
+      const m=document.createElement('div');m.className='milestone'+(inPath?' crit':'');m.style.left=(x-6)+'px';m.style.background=color;br.appendChild(m);
+      const lb=document.createElement('div');lb.className='mslbl';lb.style.left=(x+11)+'px';lb.innerHTML=`${t.name} <span class="msd">[${fmt(d(t.start))}]</span>`;br.appendChild(lb);
+    }else if(sum||t.level===1){
+      const b=document.createElement('div');b.className='capbar'+(inPath?' crit':'');b.style.left=x+'px';b.style.width=w+'px';b.style.background=color;br.appendChild(b);
+      const lb=document.createElement('div');lb.className='caplbl';lb.style.left=(x+w+6)+'px';lb.textContent=fmt(d(t.start))+' – '+fmt(d(t.end))+' · '+t.pct+'%';br.appendChild(lb);
+    }else{
+      const b=document.createElement('div');b.className='bar'+(inPath?' crit':'');b.style.left=x+'px';b.style.width=w+'px';b.style.background=color;
+      b.innerHTML=`<div class="prog" style="width:${100-(t.pct||0)}%;left:auto;right:0;background:rgba(255,255,255,.6)"></div><div class="lbl">${fmt(d(t.start))} – ${fmt(d(t.end))}</div>`;
+      br.appendChild(b);
+    }
+    canvas.appendChild(br);
+    LEFTELS.push(r);RIGHTELS.push(br);
+    rowPos[t.id]=rowCount;rowCount++;
+    // ---- sub-fila de avance (fases medibles: meses/unidades) ----
+    if(t.medida){
+      const sr=document.createElement('div');sr.className='subrow';
+      sr.innerHTML=`<div class="box"><label>Avance ${t.medida.tipo==='meses'?'de obra':'en unidades'}:</label>
+        <input type="number" min="0" value="${t.medida.avance}" onchange="setAvance(${t.id},this.value)">
+        <span class="u">de</span>
+        <input type="number" min="1" value="${t.medida.meta}" onchange="setMeta(${t.id},this.value)">
+        <span class="u">${t.medida.tipo}</span><span class="p">= ${mpct(t)}%</span></div>`;
+      rows.appendChild(sr);
+      const sb=document.createElement('div');sb.className='barrow';canvas.appendChild(sb);
+      LEFTELS.push(sr);RIGHTELS.push(sb);
+      rowCount++;
+    }
+  });
+  ROWPOS=rowPos;
+  syncLayout();
+  saveState();
+}
+// alturas variables (nombres en varios renglones) + dependencias + línea de HOY
+let LEFTELS=[],RIGHTELS=[],ROWPOS={};
+function syncLayout(){
+  if(!LEFTELS.length)return;
+  const tops=[],hs=[];let top=0;
+  for(let k=0;k<LEFTELS.length;k++){
+    const ta=LEFTELS[k].querySelector('textarea');
+    if(ta){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';}
+    const h=Math.max(32,LEFTELS[k].offsetHeight||34);
+    RIGHTELS[k].style.height=h+'px';
+    const inner=RIGHTELS[k].querySelector('.bar,.capbar,.milestone');
+    if(inner){const ih=inner.classList.contains('bar')?16:inner.classList.contains('milestone')?14:8;
+      inner.style.top=Math.max(2,(h-ih)/2)+'px';
+      const lbl=RIGHTELS[k].querySelector('.mslbl,.caplbl');if(lbl)lbl.style.top=Math.max(2,(h-14)/2)+'px';}
+    tops[k]=top;hs[k]=h;top+=h;
+  }
+  const canvas=document.getElementById('canvas');
+  // dependencias
+  const oldsvg=canvas.querySelector('svg.deps');if(oldsvg)oldsvg.remove();
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('class','deps');svg.style.width=canvas.style.width;svg.style.height=top+'px';
+  Object.keys(ROWPOS).forEach(idStr=>{const t=byId(parseInt(idStr));if(!t||!(t.pred&&t.pred.length))return;
+    const ti=ROWPOS[t.id];const toY=tops[ti]+hs[ti]/2,toX=xOf(t.start);
+    t.pred.forEach(p=>{if(!(p in ROWPOS))return;const pt=byId(p);const pi=ROWPOS[p];const frY=tops[pi]+hs[pi]/2,frX=xOf(pt.end);
+      const crit=CRIT.has(p)&&(t.id===selId||CRIT.has(t.id));
+      const col=crit?'#ef4444':'#9db4de',wdt=crit?'2.2':'1.3';
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',`M ${frX} ${frY} L ${frX+8} ${frY} L ${frX+8} ${toY} L ${toX} ${toY}`);
+      path.setAttribute('stroke',col);path.setAttribute('fill','none');path.setAttribute('stroke-width',wdt);svg.appendChild(path);
+      const tri=document.createElementNS('http://www.w3.org/2000/svg','path');
+      tri.setAttribute('d',`M ${toX} ${toY} l -5 -3 l 0 6 z`);tri.setAttribute('fill',col);svg.appendChild(tri);});});
+  canvas.appendChild(svg);
+  // línea de HOY
+  canvas.querySelectorAll('.today-line,.today-lbl').forEach(e=>e.remove());
+  const tISO=iso(todayD());
+  if(d(tISO)>=MIN&&d(tISO)<=MAX){const tx=xOf(tISO);
+    const tl=document.createElement('div');tl.className='today-line';tl.style.left=tx+'px';tl.style.height=top+'px';canvas.appendChild(tl);
+    const tlab=document.createElement('div');tlab.className='today-lbl';tlab.style.left=tx+'px';tlab.textContent='HOY '+fmt(d(tISO));canvas.appendChild(tlab);}
+}
+
+// -------- edición --------
+function refresh(){if(view==='present')renderPresent();else render();}
+function setName(id,v){byId(id).name=v.trim()||'(sin nombre)';if(byId(id).level===1)PROJECTS[cur].name=byId(id).name;refresh();renderSelInfo();}
+function setDur(id,v){byId(id).dur=Math.max(1,parseInt(v)||1);refresh();}
+function setPct(id,v){byId(id).pct=Math.min(100,Math.max(0,parseInt(v)||0));refresh();}
+function setAvance(id,v){byId(id).medida.avance=Math.max(0,parseInt(v)||0);refresh();}
+function setMeta(id,v){byId(id).medida.meta=Math.max(1,parseInt(v)||1);refresh();}
+function setEst(id,v){const t=byId(id);t.estado=v;if(v==='Cerrado'&&!t.medida)t.pct=100;if(v==='Pendiente'&&t.pct===100&&!t.medida)t.pct=0;refresh();}
+function setStart(id,v){if(!v)return;const t=byId(id);t.baseStart=v;t.manualStart=true;
+  if(t.pred&&t.pred.length){const wm=wbsMap();alert('⚠ Esta actividad tiene predecesora ('+t.pred.map(p=>wm[p]||p).join(', ')+').\\nAl fijar la fecha de inicio manualmente, se ignora la predecesora para el cálculo.\\nSi quieres que vuelva a depender de ella, borra la fecha manual o la predecesora.');}
+  refresh();}
+function setEnd(id,v){if(!v)return;const t=byId(id);t.dur=bizDays(d(t.start),d(v));refresh();}
+function wbsToId(){const m=wbsMap(),inv={};Object.keys(m).forEach(id=>{if(m[id]!=='')inv[m[id]]=parseInt(id);});return inv;}
+function setPred(id,v){const inv=wbsToId(),seen=new Set(),out=[],lag={};
+  v.split(/[,;]+/).forEach(raw=>{const tok=raw.replace(/\s+/g,'');if(!tok)return;
+    const m=tok.match(/^([0-9.]+)(?:\+(\d+))?$/);if(!m)return;                // acepta "2.1" o "2.1+12"
+    const key=m[1],L=m[2]?parseInt(m[2]):0;let pid=null;
+    if(inv[key]!==undefined)pid=inv[key];                                    // por # (ej: 2.1)
+    else if(/^\d+$/.test(key)&&byId(parseInt(key)))pid=parseInt(key);        // respaldo: id interno
+    if(pid!=null&&pid!==id&&!seen.has(pid)){seen.add(pid);out.push(pid);if(L>0)lag[pid]=L;}
+  });
+  const t=byId(id);t.pred=out;t.plag=lag;refresh();}
+function setNote(id,v){byId(id).nota=v;saveState();}
+function setCalStart(v){if(!v)return;const p=TASKS[0];const delta=Math.round((d(v)-d(p.start))/86400000);if(!delta)return;
+  TASKS.forEach(t=>{const nd=d(t.baseStart);nd.setDate(nd.getDate()+delta);t.baseStart=iso(nd);});render();}
+function renameProject(v){PROJECTS[cur].name=v.trim()||'Proyecto';TASKS[0].name=PROJECTS[cur].name;render();}
+
+// -------- toolbar --------
+function critChain(id){const set=new Set();if(id==null)return set;const stack=[id];
+  while(stack.length){const c=stack.pop();const t=byId(c);if(!t)continue;
+    (t.pred||[]).forEach(p=>{if(!set.has(p)){set.add(p);stack.push(p);}});}
+  return set;}
+function select(id){selId=id;CRIT=critChain(id);render();renderSelInfo();}
+function renderSelInfo(){const el=document.getElementById('selInfo');
+  if(!selId){el.textContent='Selecciona una fila para editarla';return;}
+  const t=byId(selId);el.textContent='Seleccionada: '+(t.name)+' (nivel '+t.level+')';}
+function toggle(id){collapsed[id]=!collapsed[id];render();}
+function expandAll(open){TASKS.forEach(t=>collapsed[t.id]=!open);render();}
+function addTask(){let i=selId?idx(selId):TASKS.length-1;const ref=TASKS[i];const lvl=Math.max(2,ref.level);
+  const base=ref.end||ref.baseStart;const start=iso(nextWork(d(base)));
+  const nt={id:nextId(),level:lvl,name:'Nueva actividad',baseStart:start,dur:5,pred:[],pct:0,estado:'Pendiente',type:'tarea',start,end:start};
+  TASKS.splice(i+1,0,nt);selId=nt.id;render();renderSelInfo();}
+function delTask(){if(!selId){alert('Selecciona una fila.');return;}const i=idx(selId);
+  if(TASKS[i].level===1){alert('No se puede quitar el proyecto raíz.');return;}
+  TASKS.splice(i,1+descendants(i).length);selId=null;render();renderSelInfo();}
+function indent(dir){if(!selId)return;const i=idx(selId),t=TASKS[i];
+  if(dir>0){const maxLvl=i>0?TASKS[i-1].level+1:2;const target=Math.min(t.level+1,maxLvl,6);const dd=target-t.level;
+    if(dd>0){t.level+=dd;descendants(i).forEach(j=>TASKS[j].level+=dd);}}
+  else if(t.level>2){t.level-=1;descendants(i).forEach(j=>TASKS[j].level-=1);}
+  render();renderSelInfo();}
+function move(dir){if(!selId)return;const i=idx(selId),j=i+dir;if(j<1||j>=TASKS.length)return;
+  const a=TASKS.splice(i,1)[0];TASKS.splice(j,0,a);render();}
+
+// ==================== PRESENTACIÓN POR ESTADO ====================
+function showView(v){view=v;
+  document.getElementById('landing').style.display='none';
+  document.getElementById('kpis').style.display=v==='gantt'?'flex':'none';
+  document.getElementById('toolbar').style.display=v==='gantt'?'flex':'none';
+  document.getElementById('gantt').style.display=v==='gantt'?'flex':'none';
+  document.getElementById('present').style.display=v==='present'?'flex':'none';
+  document.getElementById('tabG').classList.toggle('active',v==='gantt');
+  document.getElementById('tabP').classList.toggle('active',v==='present');
+  if(v==='gantt')render();
+  if(v==='present')renderPresent();}
+function predNames(t){return (t.pred||[]).map(p=>{const pt=byId(p);return pt?pt.name:('#'+p);}).join(', ');}
+const ESTORD={'Cerrado':0,'En curso':1,'Pendiente':2};
+// Orden presentación gerencial: 1º En curso, 2º Pendientes, 3º Cerradas.
+// En curso/Pendientes por fecha de inicio (más cercana arriba).
+// Cerradas por fecha de cierre (cierre reciente arriba, más antiguas abajo).
+const PREORD={'En curso':0,'Pendiente':1,'Cerrado':2};
+function cmpPresent(a,b){
+  const ga=PREORD[a.estado]??1,gb=PREORD[b.estado]??1;
+  if(ga!==gb)return ga-gb;
+  if(ga===2)return d(b.end)-d(a.end);      // cerradas: recientes arriba, antiguas abajo
+  return d(a.start)-d(b.start);            // en curso/pendientes: inicio más cercano arriba
+}
+function sortPresent(arr){return arr.slice().sort(cmpPresent);}
+// nombre de la actividad principal (grupo) de un ítem, si vive dentro de un subgrupo del capítulo
+function grpName(j,chapLvl){const lv=TASKS[j].level;
+  for(let k=j-1;k>=0;k--){if(TASKS[k].level<lv)return TASKS[k].level>chapLvl?TASKS[k].name:'';}
+  return '';}
+// colapsar/expandir cerradas por capítulo (preferencia de vista)
+let closedCollapsed={};
+function toggleClosed(id){closedCollapsed[id]=!closedCollapsed[id];renderPresent();}
+// comentario que crece con el texto
+function growNote(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
+function renderPresent(){schedule();
+  const g=document.getElementById('pboard');g.innerHTML='';
+  const hw=document.getElementById('hbannerWrap');hw.innerHTML='';
+  const today=todayD();
+  // 1) HITOS: franja superior, ordenados por fecha del gantt, con marca de hoy
+  const hg=TASKS.findIndex(t=>t.level===2&&t.name==='HITOS CLAVE');
+  const pdfBtn=`<button class="pdfbtn" onclick="exportPDF()">⬇ Exportar PDF</button>`;
+  if(hg>=0){let kids=descendants(hg).filter(j=>TASKS[j].type==='hito').map(j=>TASKS[j]).sort((a,b)=>d(a.start)-d(b.start));
+    hw.innerHTML=`<div class="hbanner"><div class="hb-t"><span>◆ HITOS CLAVE &nbsp;<span style="font-weight:400;color:#9fb0c8">(orden por fecha · HOY ${fmt(today)})</span></span>${pdfBtn}</div><div class="hb-list">`+
+      kids.map(k=>{const past=d(k.end)<today&&k.estado!=='Cerrado';
+        return `<div class="hb-item" ${past?'style=\"border-color:#ef4444\"':''}><span class="hb-n">${k.name}</span><span class="hb-d">${fmt(d(k.start))}</span>
+        <span class="tag ${k.estado==='Cerrado'?'ok':k.estado==='En curso'?'curso':(past?'':'pend')}" ${past?'style=\"background:#fee2e2;color:#ef4444\"':''}>${past?'⚠ vencido':k.estado}</span></div>`;}).join('')+
+      `</div></div>`;
+  } else {
+    hw.innerHTML=`<div class="hbanner"><div class="hb-t"><span>Presentación Gerencial</span>${pdfBtn}</div></div>`;
+  }
+  // 2) capítulos (SIN hitos, SIN fases medibles Construcción/Ventas/Escrituración/Entregas)
+  TASKS.forEach((t,i)=>{if(t.level!==2)return;if(t.name==='HITOS CLAVE')return;if(t.medida)return;
+    const color=groupColor(i);const pct=t.pct||0;
+    const badge=pct>=100?'var(--ok)':pct>0?'var(--curso)':'var(--pend)';
+    const leafJ=descendants(i).filter(j=>!isSummary(j));
+    const items=(leafJ.length?leafJ:[i]).map(j=>({t:TASKS[j],grp:grpName(j,t.level)}));
+    items.sort((a,b)=>cmpPresent(a.t,b.t)); // En curso → Pendientes → Cerradas
+    const itemLi=o=>{const x=o.t,est=x.estado||'Pendiente';
+      const over=est!=='Cerrado'&&d(x.end)<today;
+      const fin=`<span class="fin">Fin: ${fmt(d(x.end))}</span>`+(over?' <span class="over">⚠ vencida</span>':'');
+      const grp=o.grp?`<div class="pgrp">${escT(o.grp)}</div>`:'';
+      const note=`<textarea class="pnote" rows="1" oninput="growNote(this)" placeholder="Comentario…" onchange="setNote(${x.id},this.value)">${escT(x.nota||'')}</textarea>`;
+      if(est==='Cerrado')return `<li><span class="tag ok">✓ Cerrado</span>
+        <div style="flex:1">${grp}<div class="act">${escT(x.name)}</div><div class="st">${fin}</div></div></li>`;
+      if(est==='En curso')return `<li class="li-curso"><span class="tag curso">● En curso</span>
+        <div style="flex:1">${grp}<div class="act">${escT(x.name)}</div><div class="st">${fin} · ${x.pct||0}%</div>${note}</div></li>`;
+      const dep=predNames(x);const detail=dep?('Depende de: '+dep):('Inicia: '+fmt(d(x.start)));
+      return `<li><span class="tag pend">○ Pendiente</span>
+        <div style="flex:1">${grp}<div class="act">${escT(x.name)}</div><div class="st">${fin} · ${detail}</div>${note}</div></li>`;
+    };
+    const abiertas=items.filter(o=>(o.t.estado||'Pendiente')!=='Cerrado');
+    const cerradas=items.filter(o=>(o.t.estado||'Pendiente')==='Cerrado');
+    const coll=closedCollapsed[t.id];
+    let lis=abiertas.map(itemLi).join('');
+    if(cerradas.length){
+      lis+=`<li class="closedtoggle" onclick="toggleClosed(${t.id})">${coll?'▸':'▾'} Cerradas (${cerradas.length})</li>`;
+      if(!coll)lis+=cerradas.map(itemLi).join('');
+    }
+    g.innerHTML+=`<div class="pcard"><h3 style="border-left:5px solid ${color}"><span>${escT(t.name)}</span>
+      <span class="badge" style="background:${badge};color:#fff">${pct}%</span></h3>
+      <div class="pbar"><i style="width:${pct}%;background:${color}"></i></div><ul>${lis}</ul></div>`;
+  });
+  g.querySelectorAll('textarea.pnote').forEach(growNote);}
+
+// ==================== PDF + CORREO ====================
+function pdfChapters(){ // devuelve datos de la presentación para PDF/correo
+  schedule();const out=[];
+  TASKS.forEach((t,i)=>{if(t.level!==2||t.name==='HITOS CLAVE'||t.medida)return;
+    const leaves=descendants(i).filter(j=>!isSummary(j)).map(j=>TASKS[j]);
+    const src=sortPresent(leaves.length?leaves:[t]);
+    out.push({name:t.name,pct:t.pct||0,items:src});});
+  return out;}
+function exportPDF(){
+  const p=TASKS[0],today=todayD();
+  let html=`<div class="pdf-h1">Presentación Gerencial — ${PROJECTS[cur].name}</div>
+    <div class="pdf-meta">Fecha: ${fmt(today)} &nbsp;·&nbsp; Avance global: ${p.pct}%</div>`;
+  const hg=TASKS.findIndex(t=>t.level===2&&t.name==='HITOS CLAVE');
+  if(hg>=0){let kids=descendants(hg).filter(j=>TASKS[j].type==='hito').map(j=>TASKS[j]).sort((a,b)=>d(a.start)-d(b.start));
+    html+=`<div class="pdf-card"><h3><span>◆ Hitos clave</span></h3><ul>`+
+      kids.map(k=>`<li><b>${fmt(d(k.start))}</b> — ${k.name} (${k.estado})</li>`).join('')+`</ul></div>`;}
+  pdfChapters().forEach(ch=>{
+    html+=`<div class="pdf-card"><h3><span>${ch.name}</span><span>${ch.pct}%</span></h3><ul>`+
+      ch.items.map(x=>{const est=x.estado||'Pendiente';const dep=predNames(x);
+        const detail=est==='Cerrado'?'':(est==='En curso'?` · ${x.pct||0}%`:(dep?` · Depende de: ${dep}`:` · Inicia: ${fmt(d(x.start))}`));
+        const note=x.nota?` — «${x.nota}»`:'';
+        return `<li><b>[${est}]</b> ${x.name} · Fin: ${fmt(d(x.end))}${detail}${note}</li>`;}).join('')+`</ul></div>`;});
+  document.getElementById('printArea').innerHTML=html;
+  window.print();}
+function sendReport(){
+  const to=(document.getElementById('mailto').value||'').trim();
+  if(!to){alert('Escribe el correo de destino en el recuadro.');return;}
+  const p=TASKS[0],today=todayD();
+  let body=`Presentación Gerencial — ${PROJECTS[cur].name}\nFecha: ${fmt(today)} · Avance global: ${p.pct}%\n\n`;
+  pdfChapters().forEach(ch=>{body+=`== ${ch.name} (${ch.pct}%) ==\n`;
+    ch.items.forEach(x=>{const est=x.estado||'Pendiente';const dep=predNames(x);
+      const detail=est==='Cerrado'?'':(est==='En curso'?` · ${x.pct||0}%`:(dep?` · Depende de: ${dep}`:` · Inicia: ${fmt(d(x.start))}`));
+      const note=x.nota?` — "${x.nota}"`:'';
+      body+=`  [${est}] ${x.name} · Fin: ${fmt(d(x.end))}${detail}${note}\n`;});
+    body+='\n';});
+  const subject='Informe gerencial — '+PROJECTS[cur].name;
+  window.location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);}
+
+// ==================== LANDING ====================
+function goLanding(){view='landing';selId=null;
+  ['kpis','toolbar','gantt','present'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('viewTabs').style.display='none';
+  document.getElementById('projName').style.display='none';
+  document.getElementById('calWrap').style.display='none';
+  document.getElementById('backBtn').style.display='none';
+  document.getElementById('landing').style.display='block';
+  renderLanding();}
+function renderLanding(){const el=document.getElementById('plist');el.innerHTML='';
+  PROJECTS.forEach((p,pi)=>{
+    const savedCur=cur;cur=pi;bind();schedule();const st=projStats();cur=savedCur;bind();
+    const color=NAMECOLOR[p.tasks[1]?p.tasks[1].name:'']||PALETTE[pi%PALETTE.length];
+    const c2=PALETTE[pi%PALETTE.length];
+    el.innerHTML+=`<div class="pcardL" onclick="openProject(${pi})">
+      <button class="delp" title="Eliminar proyecto" onclick="event.stopPropagation();deleteProject(${pi})">🗑</button>
+      <div class="top" style="background:${c2}"></div>
+      <div class="body"><div class="nm">${p.name}</div>
+        <div class="mini">
+          <div><b>${st.pct}%</b><span>Avance</span></div>
+          <div><b>${fmt(d(st.ini))}</b><span>Inicio</span></div>
+          <div><b>${fmt(d(st.fin))}</b><span>Fin</span></div>
+          <div><b>${st.nAct}</b><span>Activ.</span></div>
+        </div>
+        <div class="pr"><i style="width:${st.pct}%;background:${c2}"></i></div>
+      </div></div>`;
+  });
+  el.innerHTML+=`<div class="newcard" onclick="newProject()">＋ Nuevo proyecto en ceros</div>`;
+}
+function openProject(pi){cur=pi;bind();selId=null;
+  document.getElementById('viewTabs').style.display='flex';
+  document.getElementById('projName').style.display='block';
+  document.getElementById('calWrap').style.display='flex';
+  document.getElementById('backBtn').style.display='block';
+  showView('gantt');renderSelInfo();}
+function newProject(){const name=prompt('Nombre del nuevo proyecto (se copia la estructura de "'+PROJECTS[0].name+'" con avance en ceros):','Nuevo proyecto');if(name===null)return;
+  const t=cloneTasks(PROJECTS[0].tasks);  // toma TUS ajustes actuales del proyecto maestro
+  t.forEach(x=>{x.pct=0;x.nota='';x.manualStart=false;if(x.estado!=='')x.estado='Pendiente';if(x.medida)x.medida.avance=0;});
+  if(t[0])t[0].name=name.trim()||'Nuevo proyecto';
+  const pr=normProject({id:uid(),name:t[0].name,tasks:t,collapsed:{},createdAt:Date.now()});
+  PROJECTS.push(pr);cloudSaveProject(pr);cacheLocal();renderLanding();}
+function deleteProject(pi){
+  if(PROJECTS.length<=1){alert('Debe quedar al menos un proyecto.');return;}
+  if(!confirm('¿Eliminar el proyecto "'+PROJECTS[pi].name+'"?\nEsta acción no se puede deshacer.'))return;
+  const pid=PROJECTS[pi].id;
+  PROJECTS.splice(pi,1);
+  if(cur>=PROJECTS.length)cur=0;
+  bind();cloudDeleteProject(pid);cacheLocal();renderLanding();}
+
+document.getElementById('gr').addEventListener('scroll',function(){
+  document.getElementById('rows').style.transform='translateY('+(-this.scrollTop)+'px)';});
+// scroll vertical también con la rueda desde el panel de actividades
+document.querySelector('.grid-left').addEventListener('wheel',function(e){
+  const gr=document.getElementById('gr');gr.scrollTop+=e.deltaY;e.preventDefault();},{passive:false});
+
+// -------- divisor arrastrable (ensanchar/reducir panel de actividades) --------
+(function(){const sp=document.getElementById('splitter');const left=document.querySelector('.grid-left');
+  let dragging=false;
+  sp.addEventListener('mousedown',e=>{dragging=true;sp.classList.add('drag');document.body.style.userSelect='none';e.preventDefault();});
+  window.addEventListener('mousemove',e=>{if(!dragging)return;
+    const rect=document.getElementById('gantt').getBoundingClientRect();
+    let w=e.clientX-rect.left;w=Math.max(360,Math.min(w,rect.width-260));
+    left.style.flexBasis=w+'px';});
+  window.addEventListener('mouseup',()=>{if(dragging){dragging=false;sp.classList.remove('drag');document.body.style.userSelect='';}});
+})();
+
+// -------- clave de acceso --------
+const ACCESS_PASS='APL2026*';
+function tryUnlock(){const v=document.getElementById('lkpass').value;
+  if(v===ACCESS_PASS){document.getElementById('lock').style.display='none';try{sessionStorage.setItem('unlocked','1');}catch(e){}}
+  else{document.getElementById('lkerr').textContent='Clave incorrecta';document.getElementById('lkpass').value='';}}
+try{if(sessionStorage.getItem('unlocked')==='1')document.getElementById('lock').style.display='none';}catch(e){}
+
+(async function init(){
+  loadState();                 // caché local rápida
+  const st=await cloudLoad();   // la nube (por-proyecto) manda
+  if(st==='empty'){PROJECTS.forEach(pr=>{normProject(pr);cloudSaveProject(pr);});} // primera vez: siembra
+  bind();goLanding();
+  setSync(st==='error'?'sin conexión (local)':'conectado a la nube ✓', st==='error'?'#ef4444':'var(--ok)');
+  // refresco automático: recibe lo que guardan los demás
+  setInterval(()=>{try{if(document.hidden)return;
+    const lk=document.getElementById('lock');if(lk&&lk.style.display!=='none')return; // no mientras está la clave
+    cloudPoll();}catch(e){}},15000);
+})();
+</script>
+</body>
+</html>
